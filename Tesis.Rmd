@@ -1,0 +1,5554 @@
+---
+title: "Tesis"
+author: "Andrea Herrera"
+date: "2026-10-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+datos <- read_excel(file.choose())
+View(datos)
+```
+
+```{r}
+dim(datos)
+names(datos)
+head(datos)
+str(datos)
+```
+
+```{r}
+unique(datos$periodo)
+```
+
+```{r}
+datos$periodo <- factor(
+  datos$periodo,
+  levels = c("Historico", "Actual")
+)
+datos$punto_comparacion <- factor(datos$punto_comparacion)
+datos$replica <- factor(datos$replica)
+```
+
+```{r}
+# Verificar la estructura de las variables categóricas
+str(datos[, 1:3])
+```
+
+```{r}
+# Verificar número de réplicas por punto y período
+table(datos$periodo, datos$punto_comparacion)
+```
+
+```{r}
+# Verificar datos faltantes
+sum(is.na(datos))
+
+# Verificar datos faltantes por variable
+colSums(is.na(datos))
+
+# Contar valores iguales a cero en variables numéricas
+sapply(datos[, 4:29], function(x) sum(x == 0, na.rm = TRUE))
+summary(datos)
+```
+
+```{r}
+# Contar resultados bajo el límite de reporte
+sum(datos$dbo_mg_l_o2 == 0)
+sum(datos$dqo_mg_l_o2 == 0)
+sum(datos$arsenico_mg_l == 0)
+sum(datos$cadmio_mg_l == 0)
+sum(datos$cobre_mg_l == 0)
+sum(datos$cromo_1_mg_l == 0)
+sum(datos$mercurio_mg_l == 0)
+sum(datos$plomo_mg_l == 0)
+sum(datos$aluminio_mg_l == 0)
+sum(datos$bario_mg_l == 0)
+sum(datos$boro_mg_l == 0)
+sum(datos$selenio_mg_l == 0)
+```
+
+```{r}
+mean(datos$dbo_mg_l_o2 == 0) * 100
+mean(datos$dqo_mg_l_o2 == 0) * 100
+mean(datos$arsenico_mg_l == 0) * 100
+mean(datos$cadmio_mg_l == 0) * 100
+mean(datos$cobre_mg_l == 0) * 100
+mean(datos$cromo_1_mg_l == 0) * 100
+mean(datos$mercurio_mg_l == 0) * 100
+mean(datos$plomo_mg_l == 0) * 100
+mean(datos$aluminio_mg_l == 0) * 100
+mean(datos$bario_mg_l == 0) * 100
+mean(datos$boro_mg_l == 0) * 100
+mean(datos$selenio_mg_l == 0) * 100
+```
+
+```{r}
+install.packages("dplyr")
+library(dplyr)
+```
+
+```{r}
+# Estadística descriptiva de parámetros fisicoquímicos por período
+descriptivos_fq <- datos %>%
+  group_by(periodo) %>%
+  summarise(
+    across(
+      c(
+        ph,
+        temperatura_c,
+        conductividad_us_cm,
+        oxigeno_disuelto_mg_l,
+        dbo_mg_l_o2,
+        tds_mg_l,
+        turbidez_ntu,
+        nitratos_mg_l,
+        nitritos_mg_l,
+        nitrogeno_total_mg_l,
+        fosforo_total_mg_l,
+        dqo_mg_l_o2
+      ),
+      list(
+        media = ~mean(.x, na.rm = TRUE),
+        de = ~sd(.x, na.rm = TRUE),
+        mediana = ~median(.x, na.rm = TRUE),
+        minimo = ~min(.x, na.rm = TRUE),
+        maximo = ~max(.x, na.rm = TRUE)
+      )
+    )
+  )
+descriptivos_fq
+```
+
+```{r}
+descriptivos_punto <- datos %>%
+  group_by(punto_comparacion, periodo) %>%
+  summarise(
+    across(
+      c(
+        ph,
+        temperatura_c,
+        conductividad_us_cm,
+        oxigeno_disuelto_mg_l,
+        dbo_mg_l_o2,
+        tds_mg_l,
+        turbidez_ntu,
+        nitratos_mg_l,
+        nitritos_mg_l,
+        nitrogeno_total_mg_l,
+        fosforo_total_mg_l,
+        dqo_mg_l_o2
+      ),
+      list(
+        media = ~mean(.x, na.rm = TRUE),
+        de = ~sd(.x, na.rm = TRUE),
+        mediana = ~median(.x, na.rm = TRUE),
+        minimo = ~min(.x, na.rm = TRUE),
+        maximo = ~max(.x, na.rm = TRUE)
+      )
+    ),
+    .groups = "drop"
+  )
+View(descriptivos_punto)
+```
+
+```{r}
+install.packages("ggplot2")
+library(ggplot2)
+```
+
+```{r}
+#Histograma de pH
+ggplot(datos, aes(x = ph)) +
+  geom_histogram(
+    bins = 10,
+    color = "black",
+    fill = "white"
+  ) +
+  labs(
+    title = "Distribución del pH",
+    x = "pH",
+    y = "Frecuencia"
+  ) +
+  theme_classic()
+```
+
+```{r}
+#pH separado por período
+ggplot(datos, aes(x = ph)) +
+  geom_histogram(
+    bins = 8,
+    color = "black",
+    fill = "white"
+  ) +
+  facet_wrap(~ periodo) +
+  labs(
+    title = "Distribución del pH por período",
+    x = "pH",
+    y = "Frecuencia"
+  ) +
+  theme_classic()
+```
+
+```{r}
+#Boxplot Histórico vs. Actual
+ggplot(datos, aes(x = periodo, y = ph)) +
+  geom_boxplot() +
+  labs(
+    title = "pH según período de muestreo",
+    x = "Período",
+    y = "pH"
+  ) +
+  theme_classic()
+```
+
+```{r}
+# Gráfico de pH por punto y período
+ggplot(
+  datos,
+  aes(
+    x = punto_comparacion,
+    y = ph,
+    shape = periodo
+  )
+) +
+  geom_jitter(
+    aes(group = periodo),
+    position = position_jitterdodge(
+      jitter.width = 0.08,
+      dodge.width = 0.5
+    ),
+    size = 2.5,
+    alpha = 0.6
+  ) +
+  stat_summary(
+    aes(group = periodo),
+    fun = mean,
+    geom = "point",
+    position = position_dodge(width = 0.5),
+    size = 4
+  ) +
+  labs(
+    title = "pH por punto de muestreo y período",
+    x = "Punto de muestreo",
+    y = "pH",
+    shape = "Período"
+  ) +
+  theme_classic()
+```
+
+```{r}
+# Identificar valores de pH mayores de 8.5 en el período actual
+datos %>%
+  filter(periodo == "Actual", ph > 8.5) %>%
+  select(periodo, punto_comparacion, replica, ph)
+```
+
+```{r}
+# 8. ANÁLISIS INFERENCIAL DEL pH
+# Modelo inicial para pH
+modelo_ph <- lm(
+  ph ~ periodo * punto_comparacion,
+  data = datos
+)
+summary(modelo_ph)
+```
+
+```{r}
+# Extraer residuos del modelo
+residuos_ph <- residuals(modelo_ph)
+
+# Histograma de residuos
+hist(
+  residuos_ph,
+  main = "Distribución de los residuos del modelo de pH",
+  xlab = "Residuos"
+)
+```
+
+```{r}
+# Gráfico Q-Q
+qqnorm(residuos_ph)
+qqline(residuos_ph)
+```
+
+```{r}
+# Prueba de Shapiro-Wilk sobre los residuos
+shapiro.test(residuos_ph)
+```
+
+```{r}
+install.packages("car")
+library(car)
+```
+
+```{r}
+# 8.2 HOMOGENEIDAD DE VARIANZAS DEL pH
+leveneTest(
+  ph ~ interaction(periodo, punto_comparacion),
+  data = datos
+)
+```
+
+```{r}
+# 8.3 RESUMEN DEL pH POR PUNTO Y PERÍODO
+ph_puntos <- datos %>%
+  group_by(punto_comparacion, periodo) %>%
+  summarise(
+    ph_media = mean(ph),
+    .groups = "drop"
+  )
+ph_puntos
+```
+
+```{r}
+install.packages("tidyr")
+library(tidyr)
+```
+
+```{r}
+ph_pareado <- ph_puntos %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = ph_media
+  )
+ph_pareado
+```
+
+```{r}
+# 8.4 DIFERENCIA DEL pH ENTRE PERÍODOS
+ph_pareado <- ph_pareado %>%
+  mutate(
+    diferencia = Actual - Historico
+  )
+ph_pareado
+```
+
+```{r}
+# Histograma de las diferencias
+plot(
+  ph_pareado$diferencia,
+  pch = 19,
+  xaxt = "n",
+  xlab = "Punto de muestreo",
+  ylab = "Diferencia de pH (Actual - Histórico)",
+  main = "Cambio del pH por punto de muestreo"
+)
+axis(
+  1,
+  at = 1:7,
+  labels = ph_pareado$punto_comparacion
+)
+abline(h = 0, lty = 2)
+```
+
+```{r}
+# Gráfico Q-Q de las diferencias
+qqnorm(
+  ph_pareado$diferencia,
+  main = "Q-Q plot de las diferencias de pH"
+)
+qqline(ph_pareado$diferencia)
+```
+
+```{r}
+# Prueba de Shapiro-Wilk de las diferencias
+shapiro.test(ph_pareado$diferencia)
+```
+
+```{r}
+# 8.5 COMPARACIÓN DEL pH ENTRE PERÍODOS
+# Prueba t de Student pareada
+prueba_ph <- t.test(
+  ph_pareado$Actual,
+  ph_pareado$Historico,
+  paired = TRUE
+)
+prueba_ph
+```
+
+```{r}
+# Cambio promedio del pH
+mean(ph_pareado$diferencia)
+# Desviación estándar de las diferencias
+sd(ph_pareado$diferencia)
+```
+
+```{r}
+d_ph <- mean(ph_pareado$diferencia) /
+        sd(ph_pareado$diferencia)
+d_ph
+```
+
+```{r}
+# 9. ANÁLISIS DE PARÁMETROS FISICOQUÍMICOS
+variables_fq <- c(
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "tds_mg_l",
+  "turbidez_ntu",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l",
+  "fosforo_total_mg_l"
+)
+```
+
+```{r}
+# Calcular media por punto y período
+fq_puntos <- datos %>%
+  group_by(punto_comparacion, periodo) %>%
+  summarise(
+    across(
+      all_of(variables_fq),
+      ~mean(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  )
+View(fq_puntos)
+```
+
+```{r}
+fq_pareado <- fq_puntos %>%
+  pivot_longer(
+    cols = all_of(variables_fq),
+    names_to = "parametro",
+    values_to = "valor"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = valor
+  ) %>%
+  mutate(
+    diferencia = Actual - Historico
+  )
+View(fq_pareado)
+```
+
+```{r}
+normalidad_fq <- fq_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    W = unname(shapiro.test(diferencia)$statistic),
+    p_shapiro = shapiro.test(diferencia)$p.value,
+    .groups = "drop"
+  )
+normalidad_fq
+```
+
+```{r}
+resumen_diferencias_fq <- fq_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    media_historica = mean(Historico),
+    media_actual = mean(Actual),
+    cambio_promedio = mean(diferencia),
+    de_cambio = sd(diferencia),
+    mediana_cambio = median(diferencia),
+    minimo_cambio = min(diferencia),
+    maximo_cambio = max(diferencia),
+    .groups = "drop"
+  )
+View(resumen_diferencias_fq)
+```
+
+```{r}
+# 9.6 REVISIÓN DE LAS DIFERENCIAS DE FÓSFORO TOTAL
+fosforo_diferencias <- fq_pareado %>%
+  filter(parametro == "fosforo_total_mg_l")
+fosforo_diferencias
+```
+
+```{r}
+qqnorm(
+  fosforo_diferencias$diferencia,
+  main = "Q-Q plot de las diferencias de fósforo total"
+)
+qqline(fosforo_diferencias$diferencia)
+```
+
+```{r}
+plot(
+  fosforo_diferencias$punto_comparacion,
+  fosforo_diferencias$diferencia,
+  pch = 19,
+  xlab = "Punto de muestreo",
+  ylab = "Diferencia de fósforo total (mg/L)",
+  main = "Cambio del fósforo total por punto"
+)
+abline(h = 0, lty = 2)
+```
+
+```{r}
+# 9.7 COMPARACIÓN DEL FÓSFORO TOTAL ENTRE PERÍODOS
+prueba_fosforo <- wilcox.test(
+  fosforo_diferencias$Actual,
+  fosforo_diferencias$Historico,
+  paired = TRUE,
+  exact = TRUE
+)
+prueba_fosforo
+```
+
+```{r}
+median(fosforo_diferencias$diferencia)
+range(fosforo_diferencias$diferencia)
+```
+
+```{r}
+# Variables que serán analizadas mediante t pareada
+variables_t <- c(
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "tds_mg_l",
+  "turbidez_ntu",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l"
+)
+```
+
+```{r}
+# Ejecutar pruebas t pareadas automáticamente
+
+resultados_t <- fq_pareado %>%
+  filter(parametro %in% variables_t) %>%
+  group_by(parametro) %>%
+  summarise(
+    media_historica = mean(Historico),
+    media_actual = mean(Actual),
+    diferencia_media = mean(diferencia),
+    de_diferencia = sd(diferencia),
+
+    t = unname(
+      t.test(Actual, Historico, paired = TRUE)$statistic
+    ),
+    gl = unname(
+      t.test(Actual, Historico, paired = TRUE)$parameter
+    ),
+    p_valor = t.test(
+      Actual, Historico, paired = TRUE
+    )$p.value,
+    IC95_inferior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[1],
+    IC95_superior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[2],
+    cohens_dz = mean(diferencia) / sd(diferencia),
+    .groups = "drop"
+  )
+View(resultados_t)
+```
+
+```{r}
+resultado_ph <- tibble(
+  parametro = "ph",
+  p_valor = prueba_ph$p.value
+)
+```
+
+```{r}
+p_fisicoquimicos <- bind_rows(
+  resultados_t %>%
+    select(parametro, p_valor),
+  resultado_ph,
+  tibble(
+    parametro = "fosforo_total_mg_l",
+    p_valor = prueba_fosforo$p.value
+  )
+)
+```
+
+```{r}
+p_fisicoquimicos <- p_fisicoquimicos %>%
+  mutate(
+    p_ajustado_holm = p.adjust(
+      p_valor,
+      method = "holm"
+    )
+  )
+p_fisicoquimicos
+```
+
+```{r}
+# 10. PREPARACIÓN DE DBO Y DQO CON DATOS CENSURADOS
+datos <- datos %>%
+  mutate(
+    dbo_analisis = ifelse(dbo_mg_l_o2 == 0, 12.5, dbo_mg_l_o2),
+    dqo_analisis = ifelse(dqo_mg_l_o2 == 0, 12.5, dqo_mg_l_o2)
+  )
+```
+
+```{r}
+datos %>%
+  select(
+    punto_comparacion,
+    periodo,
+    replica,
+    dbo_mg_l_o2,
+    dbo_analisis,
+    dqo_mg_l_o2,
+    dqo_analisis
+  ) %>%
+  filter(dbo_mg_l_o2 == 0 | dqo_mg_l_o2 == 0)
+```
+
+```{r}
+# 10.1 RESUMEN DE DBO Y DQO POR PUNTO Y PERÍODO
+dbo_dqo_puntos <- datos %>%
+  group_by(punto_comparacion, periodo) %>%
+  summarise(
+    DBO = mean(dbo_analisis),
+    DQO = mean(dqo_analisis),
+    .groups = "drop"
+  )
+dbo_dqo_puntos
+```
+
+```{r}
+dbo_dqo_pareado <- dbo_dqo_puntos %>%
+  pivot_longer(
+    cols = c(DBO, DQO),
+    names_to = "parametro",
+    values_to = "valor"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = valor
+  ) %>%
+  mutate(
+    diferencia = Actual - Historico
+  )
+dbo_dqo_pareado
+```
+
+```{r}
+normalidad_dbo_dqo <- dbo_dqo_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    W = unname(shapiro.test(diferencia)$statistic),
+    p_shapiro = shapiro.test(diferencia)$p.value,
+    .groups = "drop"
+  )
+normalidad_dbo_dqo
+```
+
+```{r}
+dbo_dqo_pareado
+```
+
+```{r}
+# 10.3 REVISIÓN GRÁFICA DE NORMALIDAD
+# DBO
+qqnorm(
+  dbo_dqo_pareado$diferencia[dbo_dqo_pareado$parametro == "DBO"],
+  main = "Q-Q plot de las diferencias de DBO"
+)
+qqline(
+  dbo_dqo_pareado$diferencia[dbo_dqo_pareado$parametro == "DBO"]
+)
+# DQO
+qqnorm(
+  dbo_dqo_pareado$diferencia[dbo_dqo_pareado$parametro == "DQO"],
+  main = "Q-Q plot de las diferencias de DQO"
+)
+qqline(
+  dbo_dqo_pareado$diferencia[dbo_dqo_pareado$parametro == "DQO"]
+)
+```
+
+```{r}
+# 10.4 COMPARACIÓN DBO Y DQO ENTRE PERÍODOS
+resultados_dbo_dqo <- dbo_dqo_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    media_historica = mean(Historico),
+    media_actual = mean(Actual),
+    diferencia_media = mean(diferencia),
+    de_diferencia = sd(diferencia),
+    t = unname(
+      t.test(Actual, Historico, paired = TRUE)$statistic
+    ),
+    gl = unname(
+      t.test(Actual, Historico, paired = TRUE)$parameter
+    ),
+    p_valor = t.test(
+      Actual, Historico, paired = TRUE
+    )$p.value,
+    IC95_inferior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[1],
+    IC95_superior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[2],
+    cohens_dz = mean(diferencia) / sd(diferencia),
+    .groups = "drop"
+  )
+resultados_dbo_dqo
+```
+
+```{r}
+# 10.5 ANÁLISIS DE SENSIBILIDAD DE DBO Y DQO
+sensibilidad <- bind_rows(
+  # Escenario 1: <25 = 0
+  datos %>%
+    mutate(
+      DBO = ifelse(dbo_mg_l_o2 == 0, 0, dbo_mg_l_o2),
+      DQO = ifelse(dqo_mg_l_o2 == 0, 0, dqo_mg_l_o2),
+      escenario = "0"
+    ),
+  # Escenario 2: <25 = 12.5
+  datos %>%
+    mutate(
+      DBO = dbo_analisis,
+      DQO = dqo_analisis,
+      escenario = "12.5"
+    ),
+  # Escenario 3: <25 = 25
+  datos %>%
+    mutate(
+      DBO = ifelse(dbo_mg_l_o2 == 0, 25, dbo_mg_l_o2),
+      DQO = ifelse(dqo_mg_l_o2 == 0, 25, dqo_mg_l_o2),
+      escenario = "25"
+    )
+)
+```
+
+```{r}
+sensibilidad_puntos <- sensibilidad %>%
+  group_by(escenario, punto_comparacion, periodo) %>%
+  summarise(
+    DBO = mean(DBO),
+    DQO = mean(DQO),
+    .groups = "drop"
+  )
+```
+
+```{r}
+sensibilidad_pareada <- sensibilidad_puntos %>%
+  pivot_longer(
+    cols = c(DBO, DQO),
+    names_to = "parametro",
+    values_to = "valor"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = valor
+  ) %>%
+  mutate(
+    diferencia = Actual - Historico
+  )
+```
+
+```{r}
+resultado_sensibilidad <- sensibilidad_pareada %>%
+  group_by(escenario, parametro) %>%
+  summarise(
+    media_historica = mean(Historico),
+    media_actual = mean(Actual),
+    diferencia_media = mean(diferencia),
+    t = unname(t.test(Actual, Historico, paired = TRUE)$statistic),
+    p_valor = t.test(Actual, Historico, paired = TRUE)$p.value,
+    .groups = "drop"
+  )
+
+resultado_sensibilidad
+ 
+```
+
+```{r}
+# 10.6 AJUSTE DE HOLM PARA DBO Y DQO
+resultados_dbo_dqo <- resultados_dbo_dqo %>%
+  mutate(
+    p_ajustado_holm = p.adjust(p_valor, method = "holm")
+  )
+
+resultados_dbo_dqo %>%
+  select(
+    parametro,
+    media_historica,
+    media_actual,
+    diferencia_media,
+    t,
+    gl,
+    p_valor,
+    p_ajustado_holm,
+    cohens_dz
+  )
+```
+
+```{r}
+# 11. ANÁLISIS MICROBIOLÓGICO
+# 11.1 VERIFICACIÓN INICIAL
+variables_micro <- c(
+  "coliformes_totales_nmp_100ml",
+  "coliformes_fecales_nmp_100ml",
+  "e_coli_nmp_100ml"
+)
+
+verificacion_micro <- datos %>%
+  summarise(
+    across(
+      all_of(variables_micro),
+      list(
+        minimo = ~min(.x, na.rm = TRUE),
+        maximo = ~max(.x, na.rm = TRUE),
+        ceros = ~sum(.x == 0, na.rm = TRUE),
+        faltantes = ~sum(is.na(.x))
+      )
+    )
+  )
+
+verificacion_micro
+```
+
+```{r}
+# 11.2 TRANSFORMACIÓN LOG10 DE VARIABLES MICROBIOLÓGICAS
+datos <- datos %>%
+  mutate(
+    log_coliformes_totales = log10(coliformes_totales_nmp_100ml),
+    log_coliformes_fecales = log10(coliformes_fecales_nmp_100ml),
+    log_e_coli = log10(e_coli_nmp_100ml)
+  )
+```
+
+```{r}
+datos %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    coliformes_totales_nmp_100ml,
+    log_coliformes_totales,
+    coliformes_fecales_nmp_100ml,
+    log_coliformes_fecales,
+    e_coli_nmp_100ml,
+    log_e_coli
+  ) %>%
+  head()
+```
+
+```{r}
+micro_puntos <- datos %>%
+  group_by(punto_comparacion, periodo) %>%
+  summarise(
+    coliformes_totales = mean(log_coliformes_totales),
+    coliformes_fecales = mean(log_coliformes_fecales),
+    e_coli = mean(log_e_coli),
+    .groups = "drop"
+  )
+
+micro_puntos
+```
+
+```{r}
+micro_pareado <- micro_puntos %>%
+  pivot_longer(
+    cols = c(
+      coliformes_totales,
+      coliformes_fecales,
+      e_coli
+    ),
+    names_to = "parametro",
+    values_to = "log10_nmp"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = log10_nmp
+  ) %>%
+  mutate(
+    diferencia = Actual - Historico
+  )
+
+micro_pareado
+```
+
+```{r}
+normalidad_micro <- micro_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    W = unname(shapiro.test(diferencia)$statistic),
+    p_shapiro = shapiro.test(diferencia)$p.value,
+    .groups = "drop"
+  )
+
+normalidad_micro
+```
+
+```{r}
+# 11.6 COMPARACIÓN MICROBIOLÓGICA ENTRE PERÍODOS
+resultados_micro <- micro_pareado %>%
+  group_by(parametro) %>%
+  summarise(
+    media_log_historica = mean(Historico),
+    media_log_actual = mean(Actual),
+    diferencia_media_log = mean(diferencia),
+    de_diferencia = sd(diferencia),
+    t = unname(
+      t.test(Actual, Historico, paired = TRUE)$statistic
+    ),
+    gl = unname(
+      t.test(Actual, Historico, paired = TRUE)$parameter
+    ),
+    p_valor = t.test(
+      Actual, Historico, paired = TRUE
+    )$p.value,
+    IC95_inferior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[1],
+    IC95_superior = t.test(
+      Actual, Historico, paired = TRUE
+    )$conf.int[2],
+    cohens_dz = mean(diferencia) / sd(diferencia),
+    .groups = "drop"
+  )
+resultados_micro
+```
+
+```{r}
+resultados_micro <- resultados_micro %>%
+  mutate(
+    p_ajustado_holm = p.adjust(
+      p_valor,
+      method = "holm"
+    )
+  )
+
+resultados_micro %>%
+  select(
+    parametro,
+    media_log_historica,
+    media_log_actual,
+    diferencia_media_log,
+    t,
+    gl,
+    p_valor,
+    p_ajustado_holm,
+    cohens_dz
+  )
+```
+
+```{r}
+resultados_micro <- resultados_micro %>%
+  mutate(
+    razon_actual_historico = 10^(diferencia_media_log),
+    reduccion_veces = 10^(-diferencia_media_log)
+  )
+
+resultados_micro %>%
+  select(
+    parametro,
+    diferencia_media_log,
+    razon_actual_historico,
+    reduccion_veces
+  )
+```
+
+```{r}
+ggplot(
+  micro_pareado,
+  aes(
+    x = punto_comparacion,
+    y = diferencia
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  geom_point(size = 3) +
+  facet_wrap(
+    ~ parametro,
+    ncol = 1,
+    labeller = as_labeller(
+      c(
+        coliformes_totales = "Coliformes totales",
+        coliformes_fecales = "Coliformes fecales",
+        e_coli = "E. coli"
+      )
+    )
+  ) +
+  labs(
+    title = "Cambio de los indicadores microbiológicos",
+    x = "Punto de muestreo",
+    y = expression(Delta~log[10]~"(NMP/100 mL)")
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    strip.text = element_text(
+      face = "bold"
+    )
+  )
+```
+
+```{r}
+# ============================================================
+# 12. ANÁLISIS DE METALES
+# 12.1 VERIFICACIÓN INICIAL
+# ============================================================
+
+variables_metales <- c(
+  "arsenico_mg_l",
+  "cadmio_mg_l",
+  "cobre_mg_l",
+  "cromo_1_mg_l",
+  "zinc_mg_l",
+  "mercurio_mg_l",
+  "plomo_mg_l",
+  "aluminio_mg_l",
+  "bario_mg_l",
+  "boro_mg_l",
+  "selenio_mg_l"
+)
+
+# Verificar que R encuentre todas las columnas
+variables_metales %in% names(datos)
+```
+
+```{r}
+# Número y porcentaje de resultados <0.005 mg/L
+resumen_censura_metales <- tibble(
+  parametro = variables_metales,
+  n_total = sapply(datos[variables_metales], length),
+  n_menor_limite = sapply(
+    datos[variables_metales],
+    function(x) sum(x == 0, na.rm = TRUE)
+  ),
+  n_detectados = sapply(
+    datos[variables_metales],
+    function(x) sum(x > 0, na.rm = TRUE)
+  ),
+  porcentaje_menor_limite = sapply(
+    datos[variables_metales],
+    function(x) mean(x == 0, na.rm = TRUE) * 100
+  ),
+  minimo_detectado = sapply(
+    datos[variables_metales],
+    function(x) {
+      positivos <- x[x > 0]
+      if(length(positivos) == 0) NA else min(positivos)
+    }
+  ),
+  maximo = sapply(
+    datos[variables_metales],
+    function(x) max(x, na.rm = TRUE)
+  )
+)
+
+resumen_censura_metales
+```
+
+```{r}
+resumen_metales_periodo <- datos %>%
+  select(
+    periodo,
+    all_of(variables_metales)
+  ) %>%
+  pivot_longer(
+    cols = all_of(variables_metales),
+    names_to = "parametro",
+    values_to = "concentracion"
+  ) %>%
+  group_by(parametro, periodo) %>%
+  summarise(
+    n = n(),
+    n_menor_limite = sum(concentracion == 0),
+    porcentaje_menor_limite =
+      100 * mean(concentracion == 0),
+    n_detectados = sum(concentracion > 0),
+    minimo_detectado = ifelse(
+      any(concentracion > 0),
+      min(concentracion[concentracion > 0]),
+      NA_real_
+    ),
+    maximo = max(concentracion),
+    .groups = "drop"
+  )
+
+resumen_metales_periodo
+```
+
+```{r}
+# 12.3 DETECCIÓN DE METALES POR PUNTO Y PERÍODO
+metales_punto <- datos %>%
+  select(
+    punto_comparacion,
+    periodo,
+    all_of(variables_metales)
+  ) %>%
+  pivot_longer(
+    cols = all_of(variables_metales),
+    names_to = "parametro",
+    values_to = "concentracion"
+  ) %>%
+  group_by(
+    punto_comparacion,
+    periodo,
+    parametro
+  ) %>%
+  summarise(
+    n_detectados = sum(concentracion > 0),
+    proporcion_detectada = mean(concentracion > 0),
+    media_detectada = ifelse(
+      any(concentracion > 0),
+      mean(concentracion[concentracion > 0]),
+      NA_real_
+    ),
+    .groups = "drop"
+  )
+
+metales_punto
+```
+
+```{r}
+deteccion_puntos <- metales_punto %>%
+  select(
+    punto_comparacion,
+    periodo,
+    parametro,
+    n_detectados
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = n_detectados
+  ) %>%
+  arrange(parametro, punto_comparacion)
+
+deteccion_puntos
+```
+
+```{r}
+datos %>%
+  filter(
+    arsenico_mg_l > 0 & arsenico_mg_l < 0.005 |
+    cadmio_mg_l > 0 & cadmio_mg_l < 0.005 |
+    plomo_mg_l > 0 & plomo_mg_l < 0.005
+  ) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    arsenico_mg_l,
+    cadmio_mg_l,
+    plomo_mg_l
+  )
+```
+
+```{r}
+# 12.3 LÍMITES ANALÍTICOS DE METALES
+
+limites_metales <- tibble(
+  parametro = c(
+    "arsenico_mg_l",
+    "cadmio_mg_l",
+    "cobre_mg_l",
+    "cromo_1_mg_l",
+    "mercurio_mg_l",
+    "plomo_mg_l",
+    "aluminio_mg_l",
+    "bario_mg_l",
+    "boro_mg_l",
+    "selenio_mg_l",
+    "zinc_mg_l"
+  ),
+  limite = c(
+    0.001, # Arsénico
+    0.001, # Cadmio
+    0.005, # Cobre
+    0.005, # Cromo
+    0.005, # Mercurio
+    0.001, # Plomo
+    0.005, # Aluminio
+    0.005, # Bario
+    0.005, # Boro
+    0.005, # Selenio
+    0.005  # Zinc
+  )
+)
+
+limites_metales
+```
+
+```{r}
+metales_largo <- datos %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    all_of(limites_metales$parametro)
+  ) %>%
+  pivot_longer(
+    cols = all_of(limites_metales$parametro),
+    names_to = "parametro",
+    values_to = "valor"
+  ) %>%
+  left_join(
+    limites_metales,
+    by = "parametro"
+  ) %>%
+  mutate(
+    detectado = if_else(
+      valor >= limite,
+      1L,
+      0L
+    )
+  )
+
+metales_largo
+```
+
+```{r}
+resumen_deteccion_metales <- metales_largo %>%
+  group_by(parametro, periodo) %>%
+  summarise(
+    n = n(),
+    n_detectados = sum(detectado),
+    n_menor_limite = sum(detectado == 0),
+    porcentaje_detectados = 100 * mean(detectado),
+    porcentaje_menor_limite = 100 * mean(detectado == 0),
+    .groups = "drop"
+  )
+
+resumen_deteccion_metales
+```
+
+```{r}
+# 12.4 FRECUENCIA DE DETECCIÓN POR PUNTO
+
+deteccion_por_punto <- metales_largo %>%
+  group_by(
+    parametro,
+    periodo,
+    punto_comparacion
+  ) %>%
+  summarise(
+    n_replicas = n(),
+    n_detectadas = sum(detectado),
+    proporcion_detectada = mean(detectado),
+    .groups = "drop"
+  ) %>%
+  select(
+    parametro,
+    punto_comparacion,
+    periodo,
+    n_replicas,
+    n_detectadas,
+    proporcion_detectada
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = c(n_replicas, n_detectadas, proporcion_detectada)
+  ) %>%
+  arrange(parametro, punto_comparacion)
+
+deteccion_por_punto
+```
+
+```{r}
+# 12.5 ESTADO DE DETECCIÓN POR PUNTO
+
+estado_metales <- deteccion_por_punto %>%
+  mutate(
+    detectado_Historico = n_detectadas_Historico > 0,
+    detectado_Actual = n_detectadas_Actual > 0
+  )
+
+estado_metales %>%
+  select(
+    parametro,
+    punto_comparacion,
+    detectado_Historico,
+    detectado_Actual
+  )
+```
+
+```{r}
+resumen_puntos_metales <- estado_metales %>%
+  group_by(parametro) %>%
+  summarise(
+    puntos_detectados_historico = sum(detectado_Historico),
+    puntos_detectados_actual = sum(detectado_Actual),
+    puntos_totales = n(),
+    porcentaje_historico =
+      100 * mean(detectado_Historico),
+    porcentaje_actual =
+      100 * mean(detectado_Actual),
+    .groups = "drop"
+  )
+
+resumen_puntos_metales
+```
+
+```{r}
+install.packages("exact2x2") # solo si no lo tienes
+library(exact2x2)
+```
+
+```{r}
+crear_tabla_mcnemar <- function(datos_metal) {
+  
+  table(
+    factor(
+      datos_metal$detectado_Historico,
+      levels = c(FALSE, TRUE)
+    ),
+    factor(
+      datos_metal$detectado_Actual,
+      levels = c(FALSE, TRUE)
+    )
+  )
+}
+```
+
+```{r}
+cadmio_estado <- estado_metales %>%
+
+  filter(parametro == "cadmio_mg_l")
+
+tabla_cadmio <- table(
+
+  cadmio_estado$detectado_Historico,
+
+  cadmio_estado$detectado_Actual
+
+)
+
+tabla_cadmio
+
+```
+
+
+```{r}
+tabla_cadmio <- crear_tabla_mcnemar(cadmio_estado)
+
+tabla_cadmio
+
+mcnemar.exact(tabla_cadmio)
+```
+
+```{r}
+# PLOMO
+
+plomo_estado <- estado_metales %>%
+  filter(parametro == "plomo_mg_l")
+
+tabla_plomo <- crear_tabla_mcnemar(plomo_estado)
+
+tabla_plomo
+
+mcnemar.exact(tabla_plomo)
+```
+
+```{r}
+# COBRE
+
+cobre_estado <- estado_metales %>%
+  filter(parametro == "cobre_mg_l")
+
+tabla_cobre <- crear_tabla_mcnemar(cobre_estado)
+
+tabla_cobre
+
+mcnemar.exact(tabla_cobre)
+```
+
+```{r}
+# ARSÉNICO
+arsenico_estado <- estado_metales %>%
+  filter(parametro == "arsenico_mg_l")
+
+tabla_arsenico <- crear_tabla_mcnemar(arsenico_estado)
+
+tabla_arsenico
+mcnemar.exact(tabla_arsenico)
+
+
+# BARIO
+bario_estado <- estado_metales %>%
+  filter(parametro == "bario_mg_l")
+
+tabla_bario <- crear_tabla_mcnemar(bario_estado)
+
+tabla_bario
+mcnemar.exact(tabla_bario)
+
+
+# BORO
+boro_estado <- estado_metales %>%
+  filter(parametro == "boro_mg_l")
+
+tabla_boro <- crear_tabla_mcnemar(boro_estado)
+
+tabla_boro
+mcnemar.exact(tabla_boro)
+
+
+# ZINC
+zinc_estado <- estado_metales %>%
+  filter(parametro == "zinc_mg_l")
+
+tabla_zinc <- crear_tabla_mcnemar(zinc_estado)
+
+tabla_zinc
+mcnemar.exact(tabla_zinc)
+```
+
+```{r}
+grafica_metales <- estado_metales %>%
+  group_by(parametro) %>%
+  summarise(
+    Historico = sum(detectado_Historico),
+    Actual = sum(detectado_Actual),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    parametro = dplyr::recode(
+      parametro,
+      "arsenico_mg_l" = "Arsénico",
+      "cadmio_mg_l" = "Cadmio",
+      "cobre_mg_l" = "Cobre",
+      "cromo_1_mg_l" = "Cromo",
+      "zinc_mg_l" = "Zinc",
+      "mercurio_mg_l" = "Mercurio",
+      "plomo_mg_l" = "Plomo",
+      "aluminio_mg_l" = "Aluminio",
+      "bario_mg_l" = "Bario",
+      "boro_mg_l" = "Boro",
+      "selenio_mg_l" = "Selenio"
+    )
+  ) %>%
+  pivot_longer(
+    cols = c(Historico, Actual),
+    names_to = "periodo",
+    values_to = "n_detectados"
+  ) %>%
+  mutate(
+    porcentaje = n_detectados / 7 * 100,
+    periodo = factor(
+      periodo,
+      levels = c("Historico", "Actual"),
+      labels = c("Histórico", "Actual")
+    )
+  )
+
+grafica_metales
+```
+
+```{r}
+# 12. GRÁFICA RESUMEN DE METALES
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Preparar datos para la gráfica
+grafica_metales <- estado_metales %>%
+  group_by(parametro) %>%
+  summarise(
+    Historico = mean(detectado_Historico) * 100,
+    Actual = mean(detectado_Actual) * 100,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    parametro = dplyr::recode(
+      parametro,
+      "arsenico_mg_l" = "Arsénico",
+      "cadmio_mg_l" = "Cadmio",
+      "cobre_mg_l" = "Cobre",
+      "cromo_1_mg_l" = "Cromo",
+      "zinc_mg_l" = "Zinc",
+      "mercurio_mg_l" = "Mercurio",
+      "plomo_mg_l" = "Plomo",
+      "aluminio_mg_l" = "Aluminio",
+      "bario_mg_l" = "Bario",
+      "boro_mg_l" = "Boro",
+      "selenio_mg_l" = "Selenio"
+    )
+  ) %>%
+  pivot_longer(
+    cols = c(Historico, Actual),
+    names_to = "periodo",
+    values_to = "porcentaje"
+  ) %>%
+  mutate(
+    periodo = factor(
+      periodo,
+      levels = c("Historico", "Actual"),
+      labels = c("Histórico", "Actual")
+    ),
+    
+    # Orden de los metales en la gráfica
+    parametro = factor(
+      parametro,
+      levels = c(
+        "Aluminio",
+        "Arsénico",
+        "Bario",
+        "Boro",
+        "Cadmio",
+        "Cobre",
+        "Cromo",
+        "Mercurio",
+        "Plomo",
+        "Selenio",
+        "Zinc"
+      )
+    )
+  )
+
+
+# Crear gráfica
+ggplot(
+  grafica_metales,
+  aes(
+    x = parametro,
+    y = porcentaje,
+    fill = periodo
+  )
+) +
+  
+  geom_col(
+    position = position_dodge(width = 0.8),
+    width = 0.7
+  ) +
+  
+  # Etiquetas SOLO cuando el porcentaje es mayor que 0
+  geom_text(
+    data = grafica_metales %>%
+      filter(porcentaje > 0),
+    aes(
+      label = paste0(
+        round(porcentaje, 1),
+        "%"
+      )
+    ),
+    position = position_dodge(width = 0.8),
+    vjust = -0.4,
+    size = 3.5
+  ) +
+  
+  scale_y_continuous(
+    limits = c(0, 112),
+    breaks = seq(0, 100, 20),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  
+  labs(
+    title = "Detección de metales por período",
+    x = "Metal",
+    y = "Puntos de muestreo con detección (%)",
+    fill = "Período"
+  ) +
+  
+  theme_classic() +
+  
+  theme(
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold",
+      size = 16
+    ),
+    
+    axis.title = element_text(
+      size = 13
+    ),
+    
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 10
+    ),
+    
+    axis.text.y = element_text(
+      size = 10
+    ),
+    
+    legend.title = element_text(
+      size = 12
+    ),
+    
+    legend.text = element_text(
+      size = 11
+    )
+  )
+```
+
+```{r}
+datos %>%
+  select(periodo, punto_comparacion, replica, tds_mg_l, TSS, ts) %>%
+  print(n = 42)
+```
+
+```{r}
+solidos_punto <- datos %>%
+  group_by(periodo, punto_comparacion) %>%
+  summarise(
+    TSS = mean(TSS, na.rm = TRUE),
+    TS  = mean(ts, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = c(TSS, TS)
+  ) %>%
+  mutate(
+    dif_TSS = TSS_Actual - TSS_Historico,
+    dif_TS  = TS_Actual - TS_Historico
+  )
+
+solidos_punto
+```
+
+```{r}
+solidos_punto <- datos %>%
+  group_by(periodo, punto_comparacion) %>%
+  summarise(
+    TSS = mean(TSS, na.rm = TRUE),
+    TS  = mean(ts, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = c(TSS, TS)
+  ) %>%
+  mutate(
+    dif_TSS = TSS_Actual - TSS_Historico,
+    dif_TS  = TS_Actual - TS_Historico
+  )
+
+solidos_punto
+```
+
+```{r}
+shapiro.test(solidos_punto$dif_TSS)
+shapiro.test(solidos_punto$dif_TS)
+```
+
+```{r}
+# T pareada para TSS
+test_TSS <- t.test(
+  solidos_punto$TSS_Actual,
+  solidos_punto$TSS_Historico,
+  paired = TRUE
+)
+
+# T pareada para TS
+test_TS <- t.test(
+  solidos_punto$TS_Actual,
+  solidos_punto$TS_Historico,
+  paired = TRUE
+)
+
+test_TSS
+test_TS
+```
+
+```{r}
+# Cohen's dz
+dz_TSS <- mean(solidos_punto$dif_TSS) /
+          sd(solidos_punto$dif_TSS)
+
+dz_TS <- mean(solidos_punto$dif_TS) /
+         sd(solidos_punto$dif_TS)
+
+dz_TSS
+dz_TS
+```
+
+```{r}
+resumen_solidos <- tibble(
+  parametro = c("TSS", "TS"),
+  
+  media_historica = c(
+    mean(solidos_punto$TSS_Historico),
+    mean(solidos_punto$TS_Historico)
+  ),
+  
+  media_actual = c(
+    mean(solidos_punto$TSS_Actual),
+    mean(solidos_punto$TS_Actual)
+  ),
+  
+  diferencia_media = c(
+    mean(solidos_punto$dif_TSS),
+    mean(solidos_punto$dif_TS)
+  ),
+  
+  sd_diferencia = c(
+    sd(solidos_punto$dif_TSS),
+    sd(solidos_punto$dif_TS)
+  ),
+  
+  t = c(
+    unname(test_TSS$statistic),
+    unname(test_TS$statistic)
+  ),
+  
+  gl = c(
+    unname(test_TSS$parameter),
+    unname(test_TS$parameter)
+  ),
+  
+  p = c(
+    test_TSS$p.value,
+    test_TS$p.value
+  ),
+  
+  IC95_inf = c(
+    test_TSS$conf.int[1],
+    test_TS$conf.int[1]
+  ),
+  
+  IC95_sup = c(
+    test_TSS$conf.int[2],
+    test_TS$conf.int[2]
+  ),
+  
+  Cohen_dz = c(dz_TSS, dz_TS)
+)
+
+resumen_solidos
+```
+
+```{r}
+p_fisicoquimicos <- tibble(
+  parametro = c(
+    "Conductividad",
+    "Nitratos",
+    "Nitritos",
+    "Nitrógeno total",
+    "Oxígeno disuelto",
+    "TDS",
+    "Temperatura",
+    "Turbidez",
+    "pH",
+    "Fósforo total",
+    "TSS"
+  ),
+  
+  p = c(
+    0.07127131,
+    0.0007929006,
+    0.02799331,
+    0.6516635,
+    0.3704954,
+    0.08025187,
+    0.8497958,
+    0.00001431356,
+    0.09563395,
+    0.03125,
+    0.07161374
+  )
+) %>%
+  mutate(
+    p_Holm = p.adjust(p, method = "holm"),
+    significativo_Holm = p_Holm < 0.05
+  )
+
+p_fisicoquimicos
+```
+
+
+```{r}
+datos_ica <- datos %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ph,
+    temperatura_c,
+    Temp_ref,
+    oxigeno_disuelto_mg_l,
+    dbo_mg_l_o2,
+    nitratos_mg_l,
+    fosforo_total_mg_l,
+    turbidez_ntu,
+    coliformes_fecales_nmp_100ml,
+    ts
+  ) %>%
+  mutate(
+    delta_temp = abs(temperatura_c - Temp_ref)
+  )
+
+datos_ica %>%
+  print(n = 42)
+```
+
+```{r}
+datos_ica %>%
+  count(periodo, punto_comparacion)
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    dbo_mg_l_o2,
+    temperatura_c,
+    Temp_ref,
+    delta_temp
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$dbo_mg_l_o2)
+summary(datos_ica$delta_temp)
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    dbo_ica = if_else(
+      periodo == "Actual" &
+      punto_comparacion == 3 &
+      dbo_mg_l_o2 == 0,
+      12.5,
+      dbo_mg_l_o2
+    )
+  )
+```
+
+```{r}
+datos_ica %>%
+  filter(periodo == "Actual", punto_comparacion == 3) %>%
+  select(periodo, punto_comparacion, replica, dbo_mg_l_o2, dbo_ica)
+```
+
+```{r}
+altitudes <- tibble(
+  punto_comparacion = 1:7,
+  altitud_m = c(
+    1373,
+    1332,
+    1268,
+    1237,
+    1217,
+    1204,
+    1193
+  )
+)
+
+datos_ica <- datos_ica %>%
+  mutate(
+    punto_comparacion = as.integer(
+      as.character(punto_comparacion)
+    )
+  ) %>%
+  left_join(
+    altitudes,
+    by = "punto_comparacion"
+  )
+```
+
+```{r}
+datos_ica %>%
+  distinct(punto_comparacion, altitud_m) %>%
+  arrange(punto_comparacion)
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    # Presión atmosférica estimada según altitud (atm)
+    presion_atm = (1 - 2.25577e-5 * altitud_m)^5.25588,
+
+    # OD a saturación a nivel del mar según temperatura (mg/L)
+    od_sat_nivel_mar =
+      14.652 -
+      0.41022 * temperatura_c +
+      0.007991 * temperatura_c^2 -
+      0.000077774 * temperatura_c^3,
+
+    # OD a saturación corregido por altitud
+    od_sat_altitud = od_sat_nivel_mar * presion_atm,
+
+    # Porcentaje de saturación
+    od_porcentaje_sat =
+      (oxigeno_disuelto_mg_l / od_sat_altitud) * 100
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    temperatura_c,
+    altitud_m,
+    oxigeno_disuelto_mg_l,
+    presion_atm,
+    od_sat_nivel_mar,
+    od_sat_altitud,
+    od_porcentaje_sat
+  ) %>%
+  print(n = 42)
+```
+
+```{r}
+summary(datos_ica$od_porcentaje_sat)
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    temperatura_c,
+    altitud_m,
+    oxigeno_disuelto_mg_l,
+    od_sat_altitud,
+    od_porcentaje_sat
+  ) %>%
+  slice(1:10)
+```
+
+```{r}
+temp_aguas_arriba <- tibble(
+  periodo = rep(c("Actual", "Historico"), each = 7),
+  punto_comparacion = rep(1:7, times = 2),
+  temp_aguas_arriba = c(
+    # Actual
+    25.6, 26.2, 23.1, 24.8, 23.5, 25.9, 24.3,
+
+    # Historico
+    23.9, 26.0, 26.9, 25.7, 24.6, 25.9, 22.1
+  )
+)
+
+datos_ica <- datos_ica %>%
+  select(-any_of("delta_temp")) %>%
+  left_join(
+    temp_aguas_arriba,
+    by = c("periodo", "punto_comparacion")
+  ) %>%
+  mutate(
+    delta_temp = abs(temperatura_c - temp_aguas_arriba)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    temperatura_c,
+    temp_aguas_arriba,
+    delta_temp
+  ) %>%
+  arrange(periodo, punto_comparacion, replica) %>%
+  print(n = 42)
+```
+
+```{r}
+summary(datos_ica$delta_temp)
+```
+
+```{r}
+q_temp <- function(x) {
+
+  temp_x <- c(
+    0, 1, 2.5, 5, 7.5, 10,
+    12.5, 15, 17.5, 20, 22.5,
+    25, 27.5, 30
+  )
+
+  temp_q <- c(
+    93, 89, 85, 72, 57, 44,
+    36, 28, 23, 21, 18,
+    15, 12, 10
+  )
+
+  approx(
+    x = temp_x,
+    y = temp_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_temp = q_temp(delta_temp)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    temperatura_c,
+    temp_aguas_arriba,
+    delta_temp,
+    q_temp
+  ) %>%
+  print(n = 42)
+```
+
+```{r}
+summary(datos_ica$q_temp)
+```
+
+```{r}
+q_od <- function(x) {
+
+  od_x <- c(
+    0, 10, 20, 30, 40,
+    50, 60, 70, 80, 90,
+    100
+  )
+
+  od_q <- c(
+    0, 4, 10, 18, 30,
+    43, 55, 67, 82, 92,
+    98
+  )
+
+  approx(
+    x = od_x,
+    y = od_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_od = q_od(od_porcentaje_sat)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    oxigeno_disuelto_mg_l,
+    od_porcentaje_sat,
+    q_od
+  ) %>%
+  print(n = 42)
+```
+
+```{r}
+summary(datos_ica$q_od)
+```
+
+```{r}
+q_ph <- function(x) {
+
+  ph_x <- c(
+    2.0, 3.0, 4.0, 5.0, 6.0,
+    6.5, 7.0, 7.5, 8.0, 8.5,
+    9.0, 10.0, 11.0, 12.0
+  )
+
+  ph_q <- c(
+    0, 2, 4, 16, 55,
+    75, 88, 92, 84, 72,
+    50, 20, 5, 0
+  )
+
+  approx(
+    x = ph_x,
+    y = ph_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_ph = q_ph(ph)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ph,
+    q_ph
+  ) %>%
+  print(n = 42)
+```
+
+```{r}
+summary(datos_ica$q_ph)
+range(datos_ica$ph, na.rm = TRUE)
+```
+
+```{r}
+summary(datos_ica$dbo_ica)
+range(datos_ica$dbo_ica, na.rm = TRUE)
+
+datos_ica %>%
+  arrange(desc(dbo_ica)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    dbo_mg_l_o2,
+    dbo_ica
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+q_dbo <- function(x) {
+  case_when(
+    is.na(x) ~ NA_real_,
+    x <= 10 ~ 96.67 - 7 * x,
+    x <= 30 ~ 38.9 - 1.23 * x,
+    x > 30 ~ 2
+  )
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_dbo = q_dbo(dbo_ica)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    dbo_mg_l_o2,
+    dbo_ica,
+    q_dbo
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$q_dbo)
+```
+
+```{r}
+summary(datos_ica$nitratos_mg_l)
+range(datos_ica$nitratos_mg_l, na.rm = TRUE)
+```
+
+```{r}
+datos_ica %>%
+  arrange(desc(nitratos_mg_l)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    nitratos_mg_l
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+q_no3 <- function(x) {
+
+  no3_x <- c(
+    0, 1, 2, 4, 6,
+    8, 10, 12, 14, 16,
+    20, 30, 40, 50, 100
+  )
+
+  no3_q <- c(
+    97, 96, 94, 89, 83,
+    76, 69, 62, 56, 51,
+    42, 29, 20, 15, 5
+  )
+
+  approx(
+    x = no3_x,
+    y = no3_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_no3 = q_no3(nitratos_mg_l)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    nitratos_mg_l,
+    q_no3
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$q_no3)
+```
+
+```{r}
+summary(datos_ica$fosforo_total_mg_l)
+range(datos_ica$fosforo_total_mg_l, na.rm = TRUE)
+
+datos_ica %>%
+  arrange(desc(fosforo_total_mg_l)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    fosforo_total_mg_l
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+q_pt <- function(x) {
+
+  pt_x <- c(
+    0, 0.1, 0.2, 0.3, 0.4,
+    0.5, 0.75, 1.0, 1.5,
+    2.0, 3.0, 4.0, 5.0
+  )
+
+  pt_q <- c(
+    99, 95, 87, 78, 69,
+    60, 42, 30, 20,
+    14, 9, 6, 5
+  )
+
+  approx(
+    x = pt_x,
+    y = pt_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_pt = q_pt(fosforo_total_mg_l)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    fosforo_total_mg_l,
+    q_pt
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$q_pt)
+```
+
+```{r}
+summary(datos_ica$turbidez_ntu)
+range(datos_ica$turbidez_ntu, na.rm = TRUE)
+
+datos_ica %>%
+  arrange(desc(turbidez_ntu)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    turbidez_ntu
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+q_turb <- function(x) {
+
+  turb_x <- c(
+    0, 5, 10, 15, 20,
+    30, 40, 50, 60, 70,
+    80, 90, 100
+  )
+
+  turb_q <- c(
+    97, 87, 79, 72, 66,
+    57, 50, 44, 39, 34,
+    30, 27, 24
+  )
+
+  approx(
+    x = turb_x,
+    y = turb_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_turb = q_turb(turbidez_ntu)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    turbidez_ntu,
+    q_turb
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$q_turb)
+```
+
+```{r}
+datos_ica %>%
+  group_by(periodo) %>%
+  summarise(
+    turbidez_media = mean(turbidez_ntu),
+    q_turb_medio = mean(q_turb),
+    .groups = "drop"
+  )
+```
+
+```{r}
+summary(datos_ica$ts)
+range(datos_ica$ts, na.rm = TRUE)
+
+datos_ica %>%
+  arrange(desc(ts)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ts
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+datos_ica %>%
+  arrange(ts) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ts
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+q_ts <- function(x) {
+
+  ts_x <- c(
+    0, 50, 100, 150, 200,
+    300, 400, 500, 600,
+    700, 800, 900, 1000,
+    1200, 1500
+  )
+
+  ts_q <- c(
+    79, 86, 89, 90, 89,
+    83, 75, 67, 59,
+    52, 46, 40, 35,
+    27, 20
+  )
+
+  approx(
+    x = ts_x,
+    y = ts_q,
+    xout = x,
+    rule = 2
+  )$y
+}
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_ts = q_ts(ts)
+  )
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ts,
+    q_ts
+  ) %>%
+  print(n = 42)
+
+summary(datos_ica$q_ts)
+```
+
+```{r}
+datos_ica %>%
+  group_by(periodo) %>%
+  summarise(
+    ts_medio = mean(ts),
+    q_ts_medio = mean(q_ts),
+    .groups = "drop"
+  )
+```
+
+```{r}
+summary(datos_ica$coliformes_fecales_nmp_100ml)
+
+range(
+  datos_ica$coliformes_fecales_nmp_100ml,
+  na.rm = TRUE
+)
+```
+
+```{r}
+datos_ica %>%
+  arrange(desc(coliformes_fecales_nmp_100ml)) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    coliformes_fecales_nmp_100ml
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+datos_ica %>%
+  arrange(coliformes_fecales_nmp_100ml) %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    coliformes_fecales_nmp_100ml
+  ) %>%
+  slice_head(n = 10)
+```
+
+```{r}
+summary(datos_ica$coliformes_fecales_nmp_100ml)
+
+range(
+  datos_ica$coliformes_fecales_nmp_100ml,
+  na.rm = TRUE
+)
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    q_cf = if_else(
+      coliformes_fecales_nmp_100ml > 100000,
+      2,
+      NA_real_
+    )
+  )
+```
+
+```{r}
+table(datos_ica$q_cf)
+summary(datos_ica$q_cf)
+```
+
+```{r}
+datos_ica <- datos_ica %>%
+  mutate(
+    ICA_NSF =
+      0.17 * q_od +
+      0.16 * q_cf +
+      0.11 * q_ph +
+      0.11 * q_dbo +
+      0.10 * q_temp +
+      0.10 * q_pt +
+      0.10 * q_no3 +
+      0.08 * q_turb +
+      0.07 * q_ts
+  )
+```
+
+```{r}
+summary(datos_ica$ICA_NSF)
+
+range(datos_ica$ICA_NSF, na.rm = TRUE)
+```
+
+```{r}
+datos_ica %>%
+  select(
+    periodo,
+    punto_comparacion,
+    replica,
+    ICA_NSF
+  ) %>%
+  arrange(periodo, punto_comparacion, replica) %>%
+  print(n = 42)
+```
+
+```{r}
+datos_ica %>%
+  summarise(
+    n = n(),
+    n_ica = sum(!is.na(ICA_NSF)),
+    n_na = sum(is.na(ICA_NSF))
+  )
+```
+
+```{r}
+ica_punto <- datos_ica %>%
+  group_by(periodo, punto_comparacion) %>%
+  summarise(
+    ICA_media = mean(ICA_NSF, na.rm = TRUE),
+    ICA_sd = sd(ICA_NSF, na.rm = TRUE),
+    ICA_min = min(ICA_NSF, na.rm = TRUE),
+    ICA_max = max(ICA_NSF, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+```
+
+```{r}
+ica_punto %>%
+  arrange(punto_comparacion, periodo)
+```
+
+```{r}
+ica_comparacion <- ica_punto %>%
+  select(
+    periodo,
+    punto_comparacion,
+    ICA_media
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = ICA_media
+  ) %>%
+  mutate(
+    diferencia = Actual - Historico
+  ) %>%
+  arrange(punto_comparacion)
+
+ica_comparacion
+```
+
+```{r}
+shapiro.test(ica_comparacion$diferencia)
+```
+
+```{r}
+ica_comparacion %>%
+  summarise(
+    media_historico = mean(Historico),
+    sd_historico = sd(Historico),
+    
+    media_actual = mean(Actual),
+    sd_actual = sd(Actual),
+    
+    diferencia_media = mean(diferencia),
+    sd_diferencia = sd(diferencia)
+  )
+```
+
+```{r}
+median(ica_comparacion$diferencia)
+```
+
+```{r}
+prueba_ica <- t.test(
+  ica_comparacion$Actual,
+  ica_comparacion$Historico,
+  paired = TRUE,
+  conf.level = 0.95
+)
+
+prueba_ica
+```
+
+```{r}
+dz_ica <- mean(ica_comparacion$diferencia) /
+  sd(ica_comparacion$diferencia)
+
+dz_ica
+```
+
+```{r}
+resumen_ica <- ica_comparacion %>%
+  summarise(
+    Historico_media = mean(Historico),
+    Historico_sd = sd(Historico),
+    Actual_media = mean(Actual),
+    Actual_sd = sd(Actual),
+    Diferencia_media = mean(diferencia),
+    Diferencia_sd = sd(diferencia)
+  )
+
+resumen_ica
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+ica_grafica <- ica_comparacion %>%
+  select(punto_comparacion, Historico, Actual) %>%
+  pivot_longer(
+    cols = c(Historico, Actual),
+    names_to = "Periodo",
+    values_to = "ICA"
+  ) %>%
+  mutate(
+    Periodo = factor(
+      Periodo,
+      levels = c("Historico", "Actual"),
+      labels = c("Histórico", "Actual")
+    )
+  )
+
+ggplot(
+  ica_grafica,
+  aes(
+    x = Periodo,
+    y = ICA,
+    group = punto_comparacion
+  )
+) +
+  geom_line(linewidth = 0.7, alpha = 0.7) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = paste0("P", punto_comparacion)),
+    nudge_x = 0.05,
+    nudge_y = 0.5,
+    size = 3.5
+  ) +
+  labs(
+    x = NULL,
+    y = "ICA-NSF",
+    title = "Cambio del ICA-NSF entre el período histórico y actual"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+ica_grafica2 <- ica_comparacion %>%
+  select(punto_comparacion, Historico, Actual) %>%
+  pivot_longer(
+    cols = c(Historico, Actual),
+    names_to = "Periodo",
+    values_to = "ICA"
+  ) %>%
+  mutate(
+    Periodo = factor(
+      Periodo,
+      levels = c("Historico", "Actual"),
+      labels = c("Histórico", "Actual")
+    ),
+    punto_comparacion = factor(punto_comparacion)
+  )
+
+ggplot(
+  ica_grafica2,
+  aes(
+    x = punto_comparacion,
+    y = ICA,
+    group = Periodo,
+    linetype = Periodo,
+    shape = Periodo
+  )
+) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = sprintf("%.1f", ICA)),
+    vjust = -0.8,
+    size = 3.3,
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Comparación del ICA-NSF histórico y actual por punto de muestreo",
+    subtitle = "Valores representativos obtenidos a partir de tres muestras por punto",
+    x = "Punto de muestreo",
+    y = "ICA-NSF",
+    linetype = "Período",
+    shape = "Período"
+  ) +
+  scale_x_discrete(
+    labels = paste0("P", 1:7)
+  ) +
+    coord_cartesian(
+    ylim = c(25, 59) #cambiar a coord_cartesian(
+    #ylim = c(25, 57)
+  #) +
+  #theme_minimal(base_size = 12) +
+  #theme(
+  #  legend.position = "top",
+  #  panel.grid.minor = element_blank(),
+  #  plot.title = element_text(face = "bold")
+  # )
+  ) +
+  annotate(
+    "text",
+    x = 4,
+    y = 57,
+    label = "t(6) = 3.61; p = 0.011; d[z] = 1.36",
+    size = 3.8
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+clasificar_ica <- function(x) {
+  case_when(
+    x >= 91 & x <= 100 ~ "Excelente",
+    x >= 71 & x < 91   ~ "Buena",
+    x >= 51 & x < 71   ~ "Media",
+    x >= 26 & x < 51   ~ "Mala",
+    x >= 0  & x < 26   ~ "Muy mala",
+    TRUE ~ NA_character_
+  )
+}
+
+ica_comparacion <- ica_comparacion %>%
+  mutate(
+    categoria_historico = clasificar_ica(Historico),
+    categoria_actual = clasificar_ica(Actual),
+    cambio_categoria = case_when(
+      categoria_historico == categoria_actual ~ "Se mantiene",
+      TRUE ~ paste(
+        categoria_historico,
+        "→",
+        categoria_actual
+      )
+    )
+  )
+
+ica_comparacion
+```
+
+## **OBJETIVO 2**
+
+```{r}
+datos_corr <- datos %>%
+  mutate(
+    log_col_totales = log10(coliformes_totales_nmp_100ml),
+    log_col_fecales = log10(coliformes_fecales_nmp_100ml),
+    log_e_coli = log10(e_coli_nmp_100ml)
+  )
+```
+
+```{r}
+fisicoquimicas <- c(
+  "ph",
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "dbo_mg_l_o2",
+  "dqo_mg_l_o2",
+  "tds_mg_l",
+  "TSS",
+  "turbidez_ntu",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l",
+  "fosforo_total_mg_l"
+)
+
+microbiologicas <- c(
+  "coliformes_totales_nmp_100ml",
+  "coliformes_fecales_nmp_100ml",
+  "e_coli_nmp_100ml"
+)
+```
+
+```{r}
+datos_corr %>%
+  summarise(
+    n_total = n(),
+    across(
+      all_of(c(fisicoquimicas, microbiologicas)),
+      ~ sum(is.na(.)),
+      .names = "NA_{.col}"
+    )
+  )
+```
+
+```{r}
+datos_corr %>%
+  count(periodo)
+```
+
+```{r}
+library(dplyr)
+library(purrr)
+library(tibble)
+
+correlaciones_periodo <- function(base, nombre_periodo) {
+
+  expand_grid(
+    fisicoquimica = fisicoquimicas,
+    microbiologica = microbiologicas
+  ) %>%
+    mutate(
+      resultado = map2(
+        fisicoquimica,
+        microbiologica,
+        ~ cor.test(
+          base[[.x]],
+          base[[.y]],
+          method = "spearman",
+          exact = FALSE
+        )
+      ),
+
+      rho = map_dbl(
+        resultado,
+        ~ unname(.x$estimate)
+      ),
+
+      p = map_dbl(
+        resultado,
+        ~ .x$p.value
+      ),
+
+      periodo = nombre_periodo
+    ) %>%
+    select(
+      periodo,
+      fisicoquimica,
+      microbiologica,
+      rho,
+      p
+    ) %>%
+    mutate(
+      p_holm = p.adjust(p, method = "holm")
+    )
+}
+```
+
+```{r}
+corr_historico <- correlaciones_periodo(
+  datos_corr %>% filter(periodo == "Historico"),
+  "Historico"
+)
+
+corr_actual <- correlaciones_periodo(
+  datos_corr %>% filter(periodo == "Actual"),
+  "Actual"
+)
+
+correlaciones <- bind_rows(
+  corr_historico,
+  corr_actual
+)
+```
+
+```{r}
+nrow(correlaciones)
+```
+
+```{r}
+correlaciones %>%
+  arrange(periodo, desc(abs(rho))) %>%
+  group_by(periodo) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+```
+
+```{r}
+correlaciones %>%
+  filter(p < 0.05) %>%
+  arrange(periodo, p)
+```
+
+```{r}
+correlaciones %>%
+  filter(p_holm < 0.05) %>%
+  arrange(periodo, p_holm)
+```
+
+```{r}
+corr_grafica <- correlaciones %>%
+  mutate(
+    fisicoquimica = dplyr::recode(
+      fisicoquimica,
+      "ph" = "pH",
+      "temperatura_c" = "Temperatura",
+      "conductividad_us_cm" = "Conductividad",
+      "oxigeno_disuelto_mg_l" = "Oxígeno disuelto",
+      "dbo_mg_l_o2" = "DBO5",
+      "dqo_mg_l_o2" = "DQO",
+      "tds_mg_l" = "TDS",
+      "TSS" = "TSS",
+      "turbidez_ntu" = "Turbidez",
+      "nitratos_mg_l" = "Nitratos",
+      "nitritos_mg_l" = "Nitritos",
+      "nitrogeno_total_mg_l" = "Nitrógeno total",
+      "fosforo_total_mg_l" = "Fósforo total"
+    ),
+
+    microbiologica = dplyr::recode(
+      microbiologica,
+      "coliformes_totales_nmp_100ml" = "Coliformes totales",
+      "coliformes_fecales_nmp_100ml" = "Coliformes fecales",
+      "e_coli_nmp_100ml" = "E. coli"
+    )
+  )
+```
+
+```{r}
+ggplot(
+  corr_grafica,
+  aes(
+    x = microbiologica,
+    y = fisicoquimica,
+    fill = rho
+  )
+) +
+  geom_tile(
+    color = "white",
+    linewidth = 0.5
+  ) +
+geom_text(
+  aes(
+    label = paste0(
+      sprintf("%.2f", rho),
+      ifelse(p < 0.05, "*", "")
+    )
+  ),
+  size = 3.2
+) +
+  facet_wrap(~periodo, nrow = 1) +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-1, 1),
+    name = expression(rho)
+  ) +
+  labs(
+  title = "Correlaciones entre parámetros fisicoquímicos y microbiológicos",
+  subtitle = "Coeficientes de correlación de Spearman por período",
+  x = "Parámetros microbiológicos",
+  y = "Parámetros fisicoquímicos",
+  caption = "* p < 0.05 sin ajuste. Ninguna asociación permaneció significativa tras la corrección de Holm."
+)+
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(
+      angle = 35,
+      hjust = 1
+    ),
+    plot.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+# Variables fisicoquímicas
+fisicoquimicas <- c(
+  "ph",
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "dbo_mg_l_o2",
+  "dqo_mg_l_o2",
+  "tds_mg_l",
+  "TSS",
+  "turbidez_ntu",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l",
+  "fosforo_total_mg_l"
+)
+
+# Variables microbiológicas transformadas
+microbiologicas_log <- c(
+  "log_col_totales",
+  "log_col_fecales",
+  "log_e_coli"
+)
+
+# Promedios por punto y período
+datos_corr_punto <- datos_corr %>%
+  group_by(periodo, punto_comparacion) %>%
+  summarise(
+    across(
+      all_of(c(fisicoquimicas, microbiologicas_log)),
+      ~ mean(.x, na.rm = TRUE)
+    ),
+    n_muestras = n(),
+    .groups = "drop"
+  )
+```
+
+```{r}
+datos_corr_punto %>%
+  count(periodo)
+
+datos_corr_punto %>%
+  select(periodo, punto_comparacion, n_muestras)
+```
+
+```{r}
+correlaciones_punto <- function(base, nombre_periodo) {
+
+  expand_grid(
+    fisicoquimica = fisicoquimicas,
+    microbiologica = microbiologicas_log
+  ) %>%
+    mutate(
+
+      resultado = map2(
+        fisicoquimica,
+        microbiologica,
+        ~ cor.test(
+          base[[.x]],
+          base[[.y]],
+          method = "spearman",
+          exact = FALSE
+        )
+      ),
+
+      rho = map_dbl(
+        resultado,
+        ~ unname(.x$estimate)
+      ),
+
+      p = map_dbl(
+        resultado,
+        ~ .x$p.value
+      ),
+
+      periodo = nombre_periodo
+
+    ) %>%
+    select(
+      periodo,
+      fisicoquimica,
+      microbiologica,
+      rho,
+      p
+    ) %>%
+    mutate(
+      p_holm = p.adjust(p, method = "holm")
+    )
+}
+```
+
+```{r}
+corr_punto_historico <- correlaciones_punto(
+  datos_corr_punto %>%
+    filter(periodo == "Historico"),
+  "Historico"
+)
+
+corr_punto_actual <- correlaciones_punto(
+  datos_corr_punto %>%
+    filter(periodo == "Actual"),
+  "Actual"
+)
+
+correlaciones_puntos <- bind_rows(
+  corr_punto_historico,
+  corr_punto_actual
+)
+```
+
+```{r}
+nrow(correlaciones_puntos)
+```
+
+```{r}
+correlaciones_puntos %>%
+  group_by(periodo) %>%
+  arrange(desc(abs(rho)), .by_group = TRUE) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+```
+
+```{r}
+correlaciones_puntos %>%
+  filter(p < 0.05) %>%
+  arrange(periodo, p)
+```
+
+```{r}
+correlaciones_puntos %>%
+  filter(p_holm < 0.05) %>%
+  arrange(periodo, p_holm)
+```
+
+```{r}
+# Correlaciones globales con 14 observaciones
+# (7 puntos × 2 períodos)
+
+corr_global <- expand_grid(
+  fisicoquimica = fisicoquimicas,
+  microbiologica = microbiologicas_log
+) %>%
+  mutate(
+    resultado = map2(
+      fisicoquimica,
+      microbiologica,
+      ~ cor.test(
+        datos_corr_punto[[.x]],
+        datos_corr_punto[[.y]],
+        method = "spearman",
+        exact = FALSE
+      )
+    ),
+
+    rho = map_dbl(
+      resultado,
+      ~ unname(.x$estimate)
+    ),
+
+    p = map_dbl(
+      resultado,
+      ~ .x$p.value
+    )
+  ) %>%
+  select(
+    fisicoquimica,
+    microbiologica,
+    rho,
+    p
+  ) %>%
+  mutate(
+    p_holm = p.adjust(p, method = "holm")
+  )
+```
+
+```{r}
+corr_global %>%
+  arrange(desc(abs(rho))) %>%
+  slice_head(n = 15)
+```
+
+```{r}
+corr_global %>%
+  filter(p < 0.05) %>%
+  arrange(p)
+```
+
+```{r}
+corr_global %>%
+  filter(p_holm < 0.05) %>%
+  arrange(p_holm)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+datos_cambios <- datos_corr_punto %>%
+  select(
+    periodo,
+    punto_comparacion,
+    turbidez_ntu,
+    nitratos_mg_l,
+    log_e_coli,
+    log_col_fecales
+  ) %>%
+  pivot_wider(
+    names_from = periodo,
+    values_from = c(
+      turbidez_ntu,
+      nitratos_mg_l,
+      log_e_coli,
+      log_col_fecales
+    )
+  ) %>%
+  mutate(
+    delta_turbidez =
+      turbidez_ntu_Actual - turbidez_ntu_Historico,
+
+    delta_nitratos =
+      nitratos_mg_l_Actual - nitratos_mg_l_Historico,
+
+    delta_e_coli =
+      log_e_coli_Actual - log_e_coli_Historico,
+
+    delta_col_fecales =
+      log_col_fecales_Actual - log_col_fecales_Historico
+  )
+
+datos_cambios
+```
+
+```{r}
+# Cambio de turbidez vs. cambio de E. coli
+cor.test(
+  datos_cambios$delta_turbidez,
+  datos_cambios$delta_e_coli,
+  method = "spearman",
+  exact = FALSE
+)
+
+# Cambio de turbidez vs. cambio de coliformes fecales
+cor.test(
+  datos_cambios$delta_turbidez,
+  datos_cambios$delta_col_fecales,
+  method = "spearman",
+  exact = FALSE
+)
+
+# Cambio de nitratos vs. cambio de E. coli
+cor.test(
+  datos_cambios$delta_nitratos,
+  datos_cambios$delta_e_coli,
+  method = "spearman",
+  exact = FALSE
+)
+```
+
+```{r}
+library(dplyr)
+
+# 1. Resumir los parámetros de contaminación por punto
+tabla_contaminacion <- datos %>%
+  filter(periodo == "Actual") %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    E_coli = mean(e_coli_nmp_100ml, na.rm = TRUE),
+
+    Coliformes_fecales = mean(
+      coliformes_fecales_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    DBO = mean(dbo_mg_l_o2, na.rm = TRUE),
+
+    DQO = mean(dqo_mg_l_o2, na.rm = TRUE),
+
+    Turbidez = mean(turbidez_ntu, na.rm = TRUE),
+
+    Nitratos = mean(nitratos_mg_l, na.rm = TRUE),
+
+    Fosforo_total = mean(
+      fosforo_total_mg_l,
+      na.rm = TRUE
+    ),
+
+    .groups = "drop"
+  )
+
+# 2. Obtener el ICA actual por punto
+tabla_ica_actual <- ica_punto %>%
+  filter(periodo == "Actual") %>%
+  select(punto_comparacion, ICA_media)
+
+# 3. Unir ambas tablas
+tabla_puntos_criticos <- tabla_contaminacion %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  left_join(
+    tabla_ica_actual %>%
+      mutate(
+        punto_comparacion = as.character(punto_comparacion)
+      ),
+    by = "punto_comparacion"
+  ) %>%
+  rename(ICA_NSF = ICA_media) %>%
+  arrange(ICA_NSF)
+
+# 4. Mostrar resultados
+print(tabla_puntos_criticos, n = 7)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+grafica_final <- tabla_puntos_criticos %>%
+  mutate(
+    punto_comparacion = factor(
+      punto_comparacion,
+      levels = as.character(1:7)
+    )
+  )
+
+# Gráfica de E. coli
+g_ecoli <- ggplot(
+  grafica_final,
+  aes(x = punto_comparacion, y = E_coli)
+) +
+  geom_point(
+    size = 3.5,
+    color = "#B54A4A"
+  ) +
+  geom_line(
+    aes(group = 1),
+    color = "#B54A4A",
+    linewidth = 0.7
+  ) +
+  scale_y_log10() +
+  labs(
+    title = "Contaminación fecal por punto de muestreo",
+    subtitle = "Concentración promedio de E. coli",
+    x = "Punto de muestreo",
+    y = "E. coli (NMP/100 mL, escala log10)"
+  ) +
+  theme_minimal(base_size = 12)
+
+# Gráfica de ICA
+g_ica <- ggplot(
+  grafica_final,
+  aes(x = punto_comparacion, y = ICA_NSF)
+) +
+  geom_col(
+    fill = "#397BA6",
+    width = 0.65
+  ) +
+  geom_hline(
+    yintercept = c(25, 50, 70, 90),
+    linetype = "dashed",
+    color = "gray65"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100)
+  ) +
+  labs(
+    title = "Calidad general del agua por punto",
+    subtitle = "Clasificación mediante ICA-NSF",
+    x = "Punto de muestreo",
+    y = "ICA-NSF"
+  ) +
+  theme_minimal(base_size = 12)
+
+# Mostrar ambas gráficas
+g_ecoli
+g_ica
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Preparar los datos
+grafica_criticos <- tabla_puntos_criticos %>%
+  mutate(
+    punto_comparacion = factor(
+      punto_comparacion,
+      levels = as.character(1:7)
+    ),
+    log_E_coli = log10(E_coli)
+  ) %>%
+  select(
+    punto_comparacion,
+    ICA_NSF,
+    log_E_coli
+  ) %>%
+  pivot_longer(
+    cols = c(ICA_NSF, log_E_coli),
+    names_to = "Indicador",
+    values_to = "Valor"
+  ) %>%
+  mutate(
+    Indicador = dplyr::recode(
+      Indicador,
+      "ICA_NSF" = "ICA-NSF",
+      "log_E_coli" = "E. coli (log10 NMP/100 mL)"
+    )
+  )
+
+# Crear gráfica
+ggplot(
+  grafica_criticos,
+  aes(x = punto_comparacion, y = Valor)
+) +
+  geom_col(
+    fill = "#397BA6",
+    width = 0.65
+  ) +
+  facet_wrap(
+    ~Indicador,
+    scales = "free_y",
+    ncol = 1
+  ) +
+  labs(
+    title = "Calidad del agua y contaminación fecal por punto",
+    subtitle = "Período actual",
+    x = "Punto de muestreo",
+    y = "Valor del indicador"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r}
+library(dplyr)
+
+tabla_micro_normativa <- datos %>%
+  filter(periodo == "Actual") %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    E_coli_media = mean(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    E_coli_min = min(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    E_coli_max = max(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    Coliformes_fecales_media = mean(
+      coliformes_fecales_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    n = n(),
+
+    .groups = "drop"
+  ) %>%
+  arrange(desc(E_coli_media))
+
+print(tabla_micro_normativa, n = 7)
+```
+
+```{r}
+library(dplyr)
+
+tabla_evaluacion_micro <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    n = sum(!is.na(e_coli_nmp_100ml)),
+
+    E_coli_media = mean(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    E_coli_geometrica = exp(
+      mean(log(e_coli_nmp_100ml), na.rm = TRUE)
+    ),
+
+    E_coli_min = min(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    E_coli_max = max(
+      e_coli_nmp_100ml,
+      na.rm = TRUE
+    ),
+
+    .groups = "drop"
+  ) %>%
+  left_join(
+    ica_punto %>%
+      filter(periodo == "Actual") %>%
+      mutate(
+        punto_comparacion = as.character(punto_comparacion)
+      ) %>%
+      select(punto_comparacion, ICA_media),
+
+    by = "punto_comparacion"
+  ) %>%
+  mutate(
+    Comparacion_potabilidad = case_when(
+      E_coli_min > 0 ~
+        "E. coli detectable en todas las muestras",
+
+      TRUE ~
+        "Revisar resultados individuales"
+    )
+  ) %>%
+  arrange(desc(E_coli_media))
+
+print(tabla_evaluacion_micro, n = 7)
+```
+
+```{r}
+library(dplyr)
+
+tabla_fisico_normativa <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    Nitratos = mean(nitratos_mg_l, na.rm = TRUE),
+    Nitritos = mean(nitritos_mg_l, na.rm = TRUE),
+    pH = mean(ph, na.rm = TRUE),
+    Turbidez = mean(turbidez_ntu, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(as.numeric(punto_comparacion))
+
+print(tabla_fisico_normativa, n = 7)
+```
+
+```{r}
+library(dplyr)
+
+tabla_nitrogeno <- tabla_fisico_normativa %>%
+  mutate(
+    Relacion_NO3 = Nitratos / 50,
+    Relacion_NO2 = Nitritos / 3,
+
+    Relacion_combinada = Relacion_NO3 + Relacion_NO2,
+
+    Interpretacion = case_when(
+      Relacion_combinada <= 1 ~
+        "Dentro del criterio combinado de referencia",
+
+      Relacion_combinada > 1 ~
+        "Supera el criterio combinado de referencia",
+
+      TRUE ~ "Sin datos"
+    )
+  ) %>%
+  arrange(desc(Relacion_combinada))
+
+print(tabla_nitrogeno, n = 7)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# 1. Seleccionar los metales analizados
+
+columnas_metales <- c(
+  "arsenico_mg_l",
+  "cadmio_mg_l",
+  "cobre_mg_l",
+  "cromo_1_mg_l",
+  "zinc_mg_l",
+  "mercurio_mg_l",
+  "plomo_mg_l",
+  "aluminio_mg_l",
+  "bario_mg_l",
+  "boro_mg_l",
+  "selenio_mg_l"
+)
+
+# 2. Organizar los resultados individuales
+
+metales_actuales <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  select(
+    punto_comparacion,
+    replica,
+    all_of(columnas_metales)
+  ) %>%
+  pivot_longer(
+    cols = all_of(columnas_metales),
+    names_to = "Metal",
+    values_to = "Concentracion"
+  )
+
+# 3. Calcular estadísticas descriptivas
+
+tabla_metales <- metales_actuales %>%
+  group_by(punto_comparacion, Metal) %>%
+  summarise(
+    n = sum(!is.na(Concentracion)),
+    Promedio = mean(Concentracion, na.rm = TRUE),
+    Minimo = min(Concentracion, na.rm = TRUE),
+    Maximo = max(Concentracion, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(Metal, as.numeric(punto_comparacion))
+
+# 4. Mostrar resultados
+
+print(tabla_metales, n = Inf)
+```
+
+```{r}
+tabla_maximos_metales <- tabla_metales %>%
+  select(
+    punto_comparacion,
+    Metal,
+    Maximo
+  ) %>%
+  pivot_wider(
+    names_from = Metal,
+    values_from = Maximo
+  ) %>%
+  arrange(as.numeric(punto_comparacion))
+
+print(tabla_maximos_metales, width = Inf)
+```
+
+```{r}
+library(dplyr)
+
+tabla_metales_alerta <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion),
+
+    Arsenico_supera = arsenico_mg_l > 0.010,
+
+    Cadmio_supera = cadmio_mg_l > 0.003,
+
+    Plomo_supera = plomo_mg_l > 0.010
+  ) %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    As_max = max(arsenico_mg_l, na.rm = TRUE),
+    As_muestras_superan = sum(Arsenico_supera, na.rm = TRUE),
+
+    Cd_max = max(cadmio_mg_l, na.rm = TRUE),
+    Cd_muestras_superan = sum(Cadmio_supera, na.rm = TRUE),
+
+    Pb_max = max(plomo_mg_l, na.rm = TRUE),
+    Pb_muestras_superan = sum(Plomo_supera, na.rm = TRUE),
+
+    .groups = "drop"
+  ) %>%
+  arrange(as.numeric(punto_comparacion))
+
+print(tabla_metales_alerta, n = 7)
+```
+
+```{r}
+tabla_metales_alerta %>%
+  select(
+    punto_comparacion,
+    Cd_max,
+    Cd_muestras_superan,
+    Pb_max,
+    Pb_muestras_superan
+  ) %>%
+  print(n = 7, width = Inf)
+```
+
+```{r}
+library(dplyr)
+
+# 1. Resumen microbiológico y fisicoquímico
+resumen_actual <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    E_coli = mean(e_coli_nmp_100ml, na.rm = TRUE),
+    Turbidez = mean(turbidez_ntu, na.rm = TRUE),
+
+    As_max = max(arsenico_mg_l, na.rm = TRUE),
+    Cd_max = max(cadmio_mg_l, na.rm = TRUE),
+    Pb_max = max(plomo_mg_l, na.rm = TRUE),
+
+    .groups = "drop"
+  )
+
+# 2. Incorporar ICA-NSF
+tabla_integrada <- resumen_actual %>%
+  left_join(
+    ica_punto %>%
+      filter(periodo == "Actual") %>%
+      mutate(
+        punto_comparacion = as.character(punto_comparacion)
+      ) %>%
+      select(punto_comparacion, ICA_media),
+
+    by = "punto_comparacion"
+  ) %>%
+  rename(ICA_NSF = ICA_media) %>%
+  mutate(
+    Clasificacion_ICA = case_when(
+      ICA_NSF <= 25 ~ "Muy mala",
+      ICA_NSF <= 50 ~ "Mala",
+      ICA_NSF <= 70 ~ "Media",
+      ICA_NSF <= 90 ~ "Buena",
+      TRUE ~ "Excelente"
+    )
+  ) %>%
+  select(
+    punto_comparacion,
+    ICA_NSF,
+    Clasificacion_ICA,
+    E_coli,
+    Turbidez,
+    As_max,
+    Cd_max,
+    Pb_max
+  ) %>%
+  arrange(as.numeric(punto_comparacion))
+
+print(tabla_integrada, n = 7, width = Inf)
+```
+
+```{r}
+library(dplyr)
+library(knitr)
+
+tabla_tesis <- tabla_integrada %>%
+  transmute(
+    Punto = punto_comparacion,
+    `ICA-NSF` = round(ICA_NSF, 2),
+    `Clasificación` = Clasificacion_ICA,
+    `E. coli (NMP/100 mL)` = round(E_coli, 0),
+    `Turbidez (NTU)` = round(Turbidez, 2),
+    `As máximo (mg/L)` = round(As_max, 3),
+    `Cd máximo (mg/L)` = round(Cd_max, 3),
+    `Pb máximo (mg/L)` = round(Pb_max, 3)
+  )
+
+knitr::kable(
+  tabla_tesis,
+  caption = paste(
+    "Evaluación integrada de la calidad del agua",
+    "en los siete puntos de muestreo."
+  ),
+  format = "simple"
+)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Valores de referencia seleccionados
+referencias_metales <- tibble(
+  Metal = c(
+    "arsenico_mg_l",
+    "cadmio_mg_l",
+    "plomo_mg_l"
+  ),
+  Referencia_mg_L = c(
+    0.010,
+    0.003,
+    0.010
+  )
+)
+
+# Resultados individuales actuales
+evaluacion_metales <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  select(
+    punto_comparacion,
+    replica,
+    arsenico_mg_l,
+    cadmio_mg_l,
+    plomo_mg_l
+  ) %>%
+  pivot_longer(
+    cols = c(
+      arsenico_mg_l,
+      cadmio_mg_l,
+      plomo_mg_l
+    ),
+    names_to = "Metal",
+    values_to = "Concentracion"
+  ) %>%
+  left_join(
+    referencias_metales,
+    by = "Metal"
+  ) %>%
+  mutate(
+    Evaluacion = case_when(
+      is.na(Concentracion) ~ "Sin dato",
+
+      Concentracion == 0 ~
+        "Revisar resultado no detectado",
+
+      Concentracion > Referencia_mg_L ~
+        "Supera referencia",
+
+      TRUE ~
+        "No supera referencia"
+    )
+  )
+
+# Resumen por punto y metal
+tabla_normativa_metales <- evaluacion_metales %>%
+  group_by(punto_comparacion, Metal) %>%
+  summarise(
+    Maximo = max(Concentracion, na.rm = TRUE),
+
+    Muestras_superan = sum(
+      Evaluacion == "Supera referencia"
+    ),
+
+    Muestras_revisar_ND = sum(
+      Evaluacion == "Revisar resultado no detectado"
+    ),
+
+    .groups = "drop"
+  ) %>%
+  arrange(
+    as.numeric(punto_comparacion),
+    Metal
+  )
+
+print(tabla_normativa_metales, n = Inf)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Límites de detección utilizados
+limites_deteccion <- tibble(
+  Metal = c(
+    "arsenico_mg_l",
+    "cadmio_mg_l",
+    "plomo_mg_l"
+  ),
+  LOD = c(
+    0.001,
+    0.001,
+    0.001
+  )
+)
+
+# Tabla de resultados individuales
+tabla_metales_presentacion <- evaluacion_metales %>%
+  left_join(
+    limites_deteccion,
+    by = "Metal"
+  ) %>%
+  mutate(
+    Resultado = case_when(
+      is.na(Concentracion) ~ "Sin dato",
+
+      Concentracion == 0 ~
+        paste0("ND (<", LOD, " mg/L)"),
+
+      TRUE ~
+        paste0(Concentracion, " mg/L")
+    )
+  ) %>%
+  select(
+    punto_comparacion,
+    replica,
+    Metal,
+    Resultado,
+    Evaluacion
+  ) %>%
+  arrange(
+    as.numeric(punto_comparacion),
+    Metal,
+    replica
+  )
+
+print(tabla_metales_presentacion, n = Inf)
+```
+
+```{r}
+datos %>%
+  filter(
+    periodo == "Actual",
+    as.character(punto_comparacion) == "4"
+  ) %>%
+  select(
+    replica,
+    cadmio_mg_l
+  )
+```
+
+```{r}
+datos %>%
+  filter(
+    periodo == "Actual",
+    as.character(punto_comparacion) == "4"
+  ) %>%
+  mutate(
+    Supera = round(cadmio_mg_l, 6) > 0.003
+  ) %>%
+  select(replica, cadmio_mg_l, Supera)
+```
+
+```{r}
+library(dplyr)
+
+tabla_cadmio_OMS <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion),
+
+    Estado_Cd = case_when(
+      is.na(cadmio_mg_l) ~ "Sin dato",
+      cadmio_mg_l == 0 ~ "ND",
+      cadmio_mg_l > 0.006 ~ "Supera",
+      cadmio_mg_l == 0.006 ~ "Igual",
+      TRUE ~ "Inferior"
+    )
+  ) %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    Cd_max = max(cadmio_mg_l, na.rm = TRUE),
+
+    Muestras_superan = sum(
+      Estado_Cd == "Supera"
+    ),
+
+    Muestras_iguales = sum(
+      Estado_Cd == "Igual"
+    ),
+
+    Muestras_ND = sum(
+      Estado_Cd == "ND"
+    ),
+
+    .groups = "drop"
+  ) %>%
+  arrange(as.numeric(punto_comparacion))
+
+print(tabla_cadmio_OMS, n = 7)
+```
+
+```{r}
+print(resultados_t, n = Inf, width = Inf)
+
+print(p_fisicoquimicos, n = Inf, width = Inf)
+
+print(resultados_dbo_dqo, n = Inf, width = Inf)
+
+print(prueba_ph)
+
+print(prueba_fosforo)
+```
+
+```{r}
+print(resultado_sensibilidad, n = Inf, width = Inf)
+```
+
+```{r}
+datos %>%
+  group_by(periodo) %>%
+  summarise(
+    Fosforo_media = mean(fosforo_total_mg_l, na.rm = TRUE),
+    Fosforo_mediana = median(fosforo_total_mg_l, na.rm = TRUE),
+    TSS_media = mean(TSS, na.rm = TRUE),
+    TSS_mediana = median(TSS, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+ls(pattern = "micro|coli|fecal|log")
+```
+
+```{r}
+print(resultados_micro, n = Inf, width = Inf)
+```
+
+```{r}
+glimpse(micro_pareado)
+glimpse(micro_puntos)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+tabla_cambios_micro <- micro_pareado %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  select(
+    punto_comparacion,
+    parametro,
+    Historico,
+    Actual,
+    diferencia
+  ) %>%
+  arrange(
+    parametro,
+    as.numeric(punto_comparacion)
+  )
+
+print(tabla_cambios_micro, n = Inf, width = Inf)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+grafica_micro <- micro_pareado %>%
+
+  mutate(
+    punto_comparacion = as.character(punto_comparacion),
+    parametro = factor(
+      parametro,
+      levels = c(
+        "coliformes_totales",
+        "coliformes_fecales",
+        "e_coli"
+      ),
+      labels = c(
+        "A. Coliformes totales",
+        "B. Coliformes fecales",
+        "C. Escherichia coli"
+      )
+    )
+  ) %>%
+  select(
+    punto_comparacion,
+    parametro,
+    Historico,
+    Actual
+  ) %>%
+  pivot_longer(
+    cols = c(Historico, Actual),
+    names_to = "periodo",
+    values_to = "log_nmp"
+  ) %>%
+  mutate(
+    periodo = factor(
+      periodo,
+      levels = c("Historico", "Actual"),
+      labels = c("Histórico", "Actual")
+    )
+  )
+
+grafica_micro_2 <- grafica_micro %>%
+  mutate(
+    punto_comparacion = factor(
+      punto_comparacion,
+      levels = as.character(1:7),
+      labels = paste0("P", 1:7)
+    )
+  )
+
+g_micro_final <- ggplot(
+  grafica_micro_2,
+  aes(
+    x = punto_comparacion,
+    y = log_nmp,
+    color = periodo,
+    group = periodo
+  )
+) +
+  geom_point(
+    size = 2.8,
+    position = position_dodge(width = 0.25)
+  ) +
+  facet_wrap(
+    ~ parametro,
+    nrow = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "Histórico" = "#397BA6",
+      "Actual" = "#B54A4A"
+    )
+  ) +
+  labs(
+    title = "Comparación microbiológica histórica y actual",
+    subtitle = "Concentraciones transformadas a log₁₀ por punto de muestreo",
+    x = "Punto de muestreo",
+    y = expression(log[10] * "(NMP/100 mL)"),
+    color = "Período",
+    caption = paste(
+      "Cada punto representa el promedio de tres muestras",
+      "transformadas a log₁₀."
+    )
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+g_micro_final <- ggplot(
+  grafica_micro_2,
+  aes(
+    x = punto_comparacion,
+    y = log_nmp
+  )
+) +
+
+  # Líneas que conectan los períodos del mismo punto
+  geom_line(
+    aes(group = punto_comparacion),
+    color = "gray65",
+    linewidth = 0.6
+  ) +
+
+  # Puntos históricos y actuales
+  geom_point(
+    aes(color = periodo),
+    size = 3,
+    position = position_dodge(width = 0.25)
+  ) +
+
+  facet_wrap(
+    ~ parametro,
+    nrow = 1
+  ) +
+
+  scale_color_manual(
+    values = c(
+      "Histórico" = "#397BA6",
+      "Actual" = "#B54A4A"
+    )
+  ) +
+
+  labs(
+    title = "Comparación microbiológica histórica y actual",
+
+    subtitle = "Concentraciones promedio transformadas a log10 por punto de muestreo",
+
+    x = "Punto de muestreo",
+
+    y = expression(log[10] * "(NMP/100 mL)"),
+
+    color = "Período",
+
+    caption = paste(
+      "Cada punto representa la media de tres valores",
+      "transformados a log10 por sitio y período."
+    )
+  ) +
+
+  theme_minimal(base_size = 12) +
+
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+print(g_micro_final)
+```
+
+```{r}
+library(dplyr)
+
+tabla_fisico_actual <- datos %>%
+  filter(periodo == "Actual") %>%
+  group_by(punto_comparacion) %>%
+  summarise(
+    pH = mean(ph, na.rm = TRUE),
+    Temperatura = mean(temperatura_c, na.rm = TRUE),
+    Conductividad = mean(conductividad_us_cm, na.rm = TRUE),
+    Oxigeno_disuelto = mean(oxigeno_disuelto_mg_l, na.rm = TRUE),
+    Turbidez = mean(turbidez_ntu, na.rm = TRUE),
+    Nitratos = mean(nitratos_mg_l, na.rm = TRUE),
+    Nitritos = mean(nitritos_mg_l, na.rm = TRUE),
+    Nitrogeno_total = mean(nitrogeno_total_mg_l, na.rm = TRUE),
+    Fosforo_total = mean(fosforo_total_mg_l, na.rm = TRUE),
+    DBO5 = mean(dbo_mg_l_o2, na.rm = TRUE),
+    DQO = mean(dqo_mg_l_o2, na.rm = TRUE),
+    TDS = mean(tds_mg_l, na.rm = TRUE),
+    TSS = mean(TSS, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(as.numeric(as.character(punto_comparacion)))
+
+print(tabla_fisico_actual, n = Inf, width = Inf)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# 1. Seleccionar parámetros y unidades
+
+variables_fisico <- c(
+  "ph",
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "turbidez_ntu",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l",
+  "fosforo_total_mg_l",
+  "dbo_mg_l_o2",
+  "dqo_mg_l_o2",
+  "tds_mg_l",
+  "TSS"
+)
+
+nombres_fisico <- c(
+  "pH",
+  "Temperatura (°C)",
+  "Conductividad (µS/cm)",
+  "Oxígeno disuelto (mg/L)",
+  "Turbidez (NTU)",
+  "Nitratos (mg/L)",
+  "Nitritos (mg/L)",
+  "Nitrógeno total (mg/L)",
+  "Fósforo total (mg/L)",
+  "DBO5 (mg/L)",
+  "DQO (mg/L)",
+  "TDS (mg/L)",
+  "TSS (mg/L)"
+)
+
+# 2. Calcular media y desviación estándar
+
+tabla_fisico_estadisticas <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = paste0(
+      "P",
+      as.character(punto_comparacion)
+    )
+  ) %>%
+  select(
+    punto_comparacion,
+    all_of(variables_fisico)
+  ) %>%
+  pivot_longer(
+    cols = all_of(variables_fisico),
+    names_to = "variable",
+    values_to = "valor"
+  ) %>%
+  group_by(punto_comparacion, variable) %>%
+  summarise(
+    n = sum(!is.na(valor)),
+    Media = mean(valor, na.rm = TRUE),
+    DE = sd(valor, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3. Revisar resultados numéricos
+
+print(
+  tabla_fisico_estadisticas,
+  n = Inf,
+  width = Inf
+)
+```
+
+```{r}
+tabla_fisico_word <- tabla_fisico_estadisticas %>%
+  filter(
+    !variable %in% c(
+      "dbo_mg_l_o2",
+      "dqo_mg_l_o2"
+    )
+  ) %>%
+  mutate(
+    Parametro = factor(
+      variable,
+      levels = variables_fisico,
+      labels = nombres_fisico
+    ),
+
+    Resultado = paste0(
+      round(Media, 2),
+      " ± ",
+      round(DE, 2)
+    )
+  ) %>%
+  select(
+    Parametro,
+    punto_comparacion,
+    Resultado
+  ) %>%
+  pivot_wider(
+    names_from = punto_comparacion,
+    values_from = Resultado
+  ) %>%
+  arrange(Parametro)
+
+print(
+  tabla_fisico_word,
+  n = Inf,
+  width = Inf
+)
+```
+
+```{r}
+library(dplyr)
+
+tabla_DBO_DQO <- datos %>%
+  filter(periodo == "Actual") %>%
+  mutate(
+    punto_comparacion = as.character(punto_comparacion)
+  ) %>%
+  select(
+    punto_comparacion,
+    replica,
+    dbo_mg_l_o2,
+    dqo_mg_l_o2
+  ) %>%
+  arrange(
+    as.numeric(punto_comparacion),
+    replica
+  )
+
+print(tabla_DBO_DQO, n = Inf, width = Inf)
+```
+
+```{r}
+View(tabla_metales_presentacion)
+View(tabla_metales)
+View(estado_metales)
+```
+
+```{r}
+View(limites_metales)
+```
+
+
+```{r}
+# Cuadro 5. Caracterización actual de metales y metaloides
+
+cuadro_5 <- metales_actuales %>%
+  left_join(limites_metales, by = c("Metal" = "parametro")) %>%
+  group_by(punto_comparacion, Metal, limite) %>%
+  summarise(
+    n = sum(!is.na(Concentracion)),
+    detectados = sum(Concentracion > 0, na.rm = TRUE),
+    media = mean(Concentracion[Concentracion > 0], na.rm = TRUE),
+    desviacion = sd(Concentracion[Concentracion > 0], na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    resultado = case_when(
+      detectados == 0 ~ paste0("<", sprintf("%.3f", limite)),
+      detectados == 3 ~ sprintf("%.4f ± %.4f", media, desviacion),
+      TRUE ~ paste0(sprintf("%.4f", media), " (", detectados, "/3)")
+    )
+  ) %>%
+  select(Metal, punto_comparacion, resultado) %>%
+  pivot_wider(
+    names_from = punto_comparacion,
+    values_from = resultado,
+    names_prefix = "P"
+  )
+
+View(cuadro_5)
+```
+
+```{r}
+cuadro_6 <- datos |>
+  dplyr::filter(periodo == "Actual") |>
+  dplyr::group_by(punto_comparacion) |>
+  dplyr::summarise(
+    dplyr::across(
+      c(
+        coliformes_totales_nmp_100ml,
+        coliformes_fecales_nmp_100ml,
+        e_coli_nmp_100ml
+      ),
+      ~ paste0(
+        formatC(mean(.x, na.rm = TRUE), format = "e", digits = 2),
+        " ± ",
+        formatC(sd(.x, na.rm = TRUE), format = "e", digits = 2)
+      )
+    ),
+    .groups = "drop"
+  )
+
+print(cuadro_6, width = Inf)
+```
+
+```{r}
+datos |>
+  dplyr::filter(periodo == "Actual", punto_comparacion %in% c("3", "4")) |>
+  dplyr::select(
+    punto_comparacion, replica,
+    coliformes_totales_nmp_100ml,
+    coliformes_fecales_nmp_100ml,
+    e_coli_nmp_100ml
+  )
+```
+
+```{r}
+# FIGURA 1. CAMBIOS FISICOQUÍMICOS HISTÓRICO VS. ACTUAL
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+parametros_fig1 <- c(
+  "ph", "temperatura_c", "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l", "turbidez_ntu",
+  "dbo_mg_l_o2", "dqo_mg_l_o2",
+  "nitratos_mg_l", "nitritos_mg_l",
+  "nitrogeno_total_mg_l", "fosforo_total_mg_l",
+  "tds_mg_l"
+)
+
+fig1_datos <- datos |>
+  group_by(periodo, punto_comparacion) |>
+  summarise(
+    across(all_of(parametros_fig1), ~ mean(.x, na.rm = TRUE)),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = all_of(parametros_fig1),
+    names_to = "parametro",
+    values_to = "valor"
+  ) |>
+  pivot_wider(
+    names_from = periodo,
+    values_from = valor
+  ) |>
+  mutate(
+    cambio = if_else(
+      abs(Actual) + abs(Historico) == 0,
+      0,
+      200 * (Actual - Historico) /
+        (abs(Actual) + abs(Historico))
+    )
+  )
+
+figura_1 <- ggplot(
+  fig1_datos,
+  aes(x = punto_comparacion, y = parametro, fill = cambio)
+) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-200, 200),
+    name = "Cambio relativo\nsimétrico (%)"
+  ) +
+  labs(
+    x = "Punto de muestreo",
+    y = "Parámetro fisicoquímico"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10)
+  )
+
+print(figura_1)
+```
+
+```{r}
+# Nombres y orden de los parámetros de la Figura 1
+
+nombres_fig1 <- c(
+  ph = "pH",
+  temperatura_c = "Temperatura (°C)",
+  conductividad_us_cm = "Conductividad (µS/cm)",
+  oxigeno_disuelto_mg_l = "Oxígeno disuelto (mg/L)",
+  turbidez_ntu = "Turbidez (NTU)",
+  dbo_mg_l_o2 = "DBO₅ (mg O₂/L)",
+  dqo_mg_l_o2 = "DQO (mg O₂/L)",
+  nitratos_mg_l = "Nitratos (mg/L)",
+  nitritos_mg_l = "Nitritos (mg/L)",
+  nitrogeno_total_mg_l = "Nitrógeno total (mg/L)",
+  fosforo_total_mg_l = "Fósforo total (mg/L)",
+  tds_mg_l = "Sólidos disueltos totales (mg/L)"
+)
+
+fig1_datos$parametro <- factor(
+  fig1_datos$parametro,
+  levels = rev(names(nombres_fig1)),
+  labels = rev(unname(nombres_fig1))
+)
+
+figura_1 <- figura_1 %+% fig1_datos
+
+print(figura_1)
+```
+
+```{r}
+datos |>
+  dplyr::group_by(periodo) |>
+  dplyr::summarise(
+    muestras = dplyr::n(),
+    valores_disponibles = sum(!is.na(TSS)),
+    .groups = "drop"
+  )
+```
+
+```{r}
+# Agregar TSS a la Figura 1
+
+tss_fig1 <- datos |>
+  dplyr::group_by(periodo, punto_comparacion) |>
+  dplyr::summarise(
+    valor = mean(TSS, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  tidyr::pivot_wider(
+    names_from = periodo,
+    values_from = valor
+  ) |>
+  dplyr::mutate(
+    parametro = "Sólidos suspendidos totales (mg/L)",
+    cambio = dplyr::if_else(
+      abs(Actual) + abs(Historico) == 0,
+      0,
+      200 * (Actual - Historico) /
+        (abs(Actual) + abs(Historico))
+    )
+  )
+
+fig1_datos <- dplyr::bind_rows(
+  fig1_datos,
+  tss_fig1
+)
+
+# Actualizar el orden de los parámetros
+fig1_datos$parametro <- factor(
+  as.character(fig1_datos$parametro),
+  levels = rev(c(
+    unname(nombres_fig1),
+    "Sólidos suspendidos totales (mg/L)"
+  ))
+)
+
+# Actualizar la gráfica
+figura_1 <- figura_1 %+% fig1_datos
+
+print(figura_1)
+```
+
+```{r}
+levels(fig1_datos$parametro) <- sub(
+  "^DBO.*$", "DBO5 (mg O2/L)",
+  levels(fig1_datos$parametro)
+)
+
+levels(fig1_datos$parametro) <- sub(
+  "^DQO.*$", "DQO (mg O2/L)",
+  levels(fig1_datos$parametro)
+)
+
+figura_1 <- figura_1 %+% fig1_datos
+print(figura_1)
+```
+
+```{r}
+fig1_datos |>
+  dplyr::filter(
+    parametro %in% c("DBO5 (mg O2/L)", "DQO (mg O2/L)")
+  ) |>
+  dplyr::select(
+    punto_comparacion, parametro, Historico, Actual, cambio
+  ) |>
+  print(n = Inf)
+```
+
+```{r}
+# Identificar comparaciones afectadas por el límite de detección
+fig1_datos <- fig1_datos |>
+  dplyr::mutate(
+    cambio = dplyr::if_else(
+      punto_comparacion == "3" &
+        as.character(parametro) %in%
+        c("DBO5 (mg O2/L)", "DQO (mg O2/L)"),
+      NA_real_,
+      cambio
+    )
+  )
+
+
+# Actualizar la figura
+figura_1 <- figura_1 %+% fig1_datos +
+  
+  geom_text(
+    aes(
+      label = ifelse(
+        is.na(cambio),
+        "NC",
+        paste0(sprintf("%.1f", cambio), "%")
+      ),
+      color = ifelse(
+        !is.na(cambio) & abs(cambio) >= 100,
+        "white",
+        "black"
+      )
+    ),
+    size = 4.2,
+    fontface = "bold",
+    show.legend = FALSE
+  ) +
+  
+  scale_color_identity() +
+  
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-200, 200),
+    na.value = "grey75",
+    name = "Cambio relativo\nsimétrico (%)"
+  )
+
+print(figura_1)
+```
+
+```{r}
+# Resumen de metales por período y punto
+
+metales <- c(
+  "arsenico_mg_l", "cadmio_mg_l", "cobre_mg_l",
+  "cromo_1_mg_l", "zinc_mg_l", "mercurio_mg_l",
+  "plomo_mg_l", "aluminio_mg_l", "bario_mg_l",
+  "boro_mg_l", "selenio_mg_l"
+)
+
+resumen_metales <- datos |>
+  dplyr::group_by(periodo, punto_comparacion) |>
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::all_of(metales),
+      ~ mean(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  )
+
+print(resumen_metales, width = Inf, n = Inf)
+```
+
+```{r}
+datos |>
+  dplyr::group_by(periodo) |>
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::all_of(metales),
+      ~ sum(.x > 0, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) |>
+  print(width = Inf)
+```
+
+```{r}
+# FIGURA 2. COMPARACIÓN DE METALES ENTRE PERÍODOS
+
+# 1. Preparar los datos
+fig2_datos <- resumen_metales |>
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(metales),
+    names_to = "elemento",
+    values_to = "concentracion"
+  ) |>
+  tidyr::pivot_wider(
+    names_from = periodo,
+    values_from = concentracion
+  ) |>
+  dplyr::mutate(
+    categoria = dplyr::case_when(
+      Historico > 0 & Actual > Historico ~ "Aumento",
+      Actual > 0 & Historico > Actual ~ "Disminución",
+      Historico > 0 & Actual == Historico ~ "Sin cambio",
+      Historico == 0 & Actual > 0 ~ "Solo actual",
+      Historico > 0 & Actual == 0 ~ "Solo histórico",
+      Historico == 0 & Actual == 0 ~ "Sin valores positivos",
+      TRUE ~ NA_character_
+    ),
+
+    # Cambio relativo simétrico (%)
+    # Solo cuando ambos períodos tienen valores positivos
+    cambio_pct = dplyr::if_else(
+      Historico > 0 & Actual > 0,
+      200 * (Actual - Historico) / (Actual + Historico),
+      NA_real_
+    ),
+
+    # Etiquetas para mostrar dentro de las celdas
+    etiqueta = dplyr::case_when(
+  categoria %in% c(
+    "Aumento",
+    "Disminución",
+    "Sin cambio"
+  ) & !is.na(cambio_pct) ~
+    paste0(sprintf("%.1f", cambio_pct), "%"),
+
+  categoria == "Sin valores positivos" ~ "NC",
+
+  TRUE ~ ""
+),
+
+    # Color de las etiquetas según el fondo
+    color_texto = dplyr::case_when(
+      categoria %in% c("Aumento", "Disminución") ~ "white",
+      TRUE ~ "black"
+    )
+  )
+
+
+# 2. Nombres de los metales
+nombres_metales <- c(
+  arsenico_mg_l = "Arsénico (As)",
+  cadmio_mg_l = "Cadmio (Cd)",
+  cobre_mg_l = "Cobre (Cu)",
+  cromo_1_mg_l = "Cromo (Cr)",
+  zinc_mg_l = "Zinc (Zn)",
+  mercurio_mg_l = "Mercurio (Hg)",
+  plomo_mg_l = "Plomo (Pb)",
+  aluminio_mg_l = "Aluminio (Al)",
+  bario_mg_l = "Bario (Ba)",
+  boro_mg_l = "Boro (B)",
+  selenio_mg_l = "Selenio (Se)"
+)
+
+fig2_datos$elemento <- factor(
+  fig2_datos$elemento,
+  levels = rev(names(nombres_metales)),
+  labels = rev(unname(nombres_metales))
+)
+
+
+# 3. Crear la figura
+figura_2 <- ggplot2::ggplot(
+  fig2_datos,
+  ggplot2::aes(
+    x = punto_comparacion,
+    y = elemento,
+    fill = categoria
+  )
+) +
+
+  # Celdas
+  ggplot2::geom_tile(
+    color = "white",
+    linewidth = 0.6
+  ) +
+
+  # Porcentajes y símbolos
+  ggplot2::geom_text(
+    ggplot2::aes(
+      label = etiqueta,
+      color = color_texto
+    ),
+    size = 4.2,
+    fontface = "bold",
+    show.legend = FALSE
+  ) +
+
+  # Colores originales de la figura
+  ggplot2::scale_fill_manual(
+    values = c(
+      "Aumento" = "#B2182B",
+      "Disminución" = "#2166AC",
+      "Sin cambio" = "#F7F7F7",
+      "Solo actual" = "#EF8A62",
+      "Solo histórico" = "#67A9CF",
+      "Sin valores positivos" = "#BDBDBD"
+    ),
+    labels = c(
+      "Aumento" = "Aumento cuantificado",
+      "Disminución" = "Disminución cuantificada",
+      "Sin cambio" = "Sin cambio cuantificado",
+      "Solo actual" = "Solo actual cuantificable",
+      "Solo histórico" = "Solo histórico cuantificable",
+      "Sin valores positivos" = "Cambio no determinable"
+    ),
+    name = "Comparación",
+    drop = FALSE
+  ) +
+
+  # Utilizar los colores definidos para el texto
+  ggplot2::scale_color_identity() +
+
+  # Títulos de los ejes
+  ggplot2::labs(
+    x = "Punto de muestreo",
+    y = "Elemento analizado"
+  ) +
+
+  # Diseño
+  ggplot2::theme_minimal(base_size = 12) +
+
+  ggplot2::theme(
+    panel.grid = ggplot2::element_blank(),
+    axis.text.x = ggplot2::element_text(
+      face = "bold"
+    ),
+    legend.position = "right"
+  )
+
+
+# 4. Mostrar la figura
+print(figura_2)
+
+
+# 5. Exportar la figura
+ggplot2::ggsave(
+  filename = "Figura_5_Comparacion_Metales.png",
+  plot = figura_2,
+  width = 14,
+  height = 9,
+  dpi = 300,
+  bg = "white"
+)
+```
+
+```{r}
+# Clasificación de cambios en metales considerando límites de detección
+
+LD <- c(
+  arsenico_mg_l = 0.001,
+  cadmio_mg_l = 0.001,
+  cobre_mg_l = 0.005,
+  cromo_1_mg_l = 0.005,
+  zinc_mg_l = 0.005,
+  mercurio_mg_l = 0.005,
+  plomo_mg_l = 0.001,
+  aluminio_mg_l = 0.005,
+  bario_mg_l = 0.005,
+  boro_mg_l = 0.005,
+  selenio_mg_l = 0.005
+)
+
+fig2_datos <- datos |>
+  dplyr::select(periodo, punto_comparacion,
+                dplyr::all_of(metales)) |>
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(metales),
+    names_to = "elemento",
+    values_to = "valor"
+  ) |>
+  dplyr::mutate(
+    limite = unname(LD[elemento]),
+    inferior = dplyr::if_else(valor == 0, 0, valor),
+    superior = dplyr::if_else(valor == 0, limite, valor),
+    censurado = valor == 0
+  ) |>
+  dplyr::group_by(periodo, punto_comparacion, elemento) |>
+  dplyr::summarise(
+    inferior = mean(inferior),
+    superior = mean(superior),
+    censurado = any(censurado),
+    .groups = "drop"
+  ) |>
+  tidyr::pivot_wider(
+    names_from = periodo,
+    values_from = c(inferior, superior, censurado)
+  ) |>
+  dplyr::mutate(
+    categoria = dplyr::case_when(
+      inferior_Actual > superior_Historico &
+        !censurado_Actual & !censurado_Historico ~
+        "Aumento cuantificado",
+
+      inferior_Actual > superior_Historico ~
+        "Aumento demostrable",
+
+      superior_Actual < inferior_Historico &
+        !censurado_Actual & !censurado_Historico ~
+        "Disminución cuantificada",
+
+      superior_Actual < inferior_Historico ~
+        "Disminución demostrable",
+
+      !censurado_Actual & !censurado_Historico &
+        inferior_Actual == inferior_Historico ~
+        "Sin cambio cuantificado",
+
+      TRUE ~ "Cambio no determinable"
+    ),
+    elemento = factor(
+      elemento,
+      levels = rev(names(nombres_metales)),
+      labels = rev(unname(nombres_metales))
+    )
+  )
+
+# Actualizar la gráfica existente
+figura_2 <- figura_2 %+% fig2_datos +
+  ggplot2::scale_fill_manual(
+    values = c(
+      "Aumento cuantificado" = "#B2182B",
+      "Aumento demostrable" = "#EF8A62",
+      "Disminución cuantificada" = "#2166AC",
+      "Disminución demostrable" = "#67A9CF",
+      "Sin cambio cuantificado" = "#F7F7F7",
+      "Cambio no determinable" = "#BDBDBD"
+    ),
+    name = "Comparación",
+    drop = FALSE
+  )
+
+print(figura_2)
+```
+
+```{r}
+# Figura 3. Comparación microbiológica histórica y actual
+
+micro_variables <- c(
+  "coliformes_totales_nmp_100ml",
+  "coliformes_fecales_nmp_100ml",
+  "e_coli_nmp_100ml"
+)
+
+fig3_datos <- datos |>
+  dplyr::group_by(periodo, punto_comparacion) |>
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::all_of(micro_variables),
+      ~ mean(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) |>
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(micro_variables),
+    names_to = "indicador",
+    values_to = "nmp"
+  ) |>
+  dplyr::mutate(
+    indicador = factor(
+      indicador,
+      levels = micro_variables,
+      labels = c(
+        "Coliformes totales",
+        "Coliformes fecales",
+        "Escherichia coli"
+      )
+    )
+  )
+
+figura_3 <- ggplot2::ggplot(
+  fig3_datos,
+  ggplot2::aes(
+    x = punto_comparacion,
+    y = nmp,
+    color = periodo,
+    group = periodo
+  )
+) +
+  ggplot2::geom_line(linewidth = 0.8) +
+  ggplot2::geom_point(size = 2.5) +
+  ggplot2::facet_wrap(~ indicador, ncol = 1) +
+  ggplot2::scale_y_log10() +
+  ggplot2::labs(
+    x = "Punto de muestreo",
+    y = "Concentración (NMP/100 mL, escala logarítmica)",
+    color = "Período"
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    strip.text = ggplot2::element_text(face = "bold"),
+    legend.position = "bottom",
+    panel.grid.minor = ggplot2::element_blank()
+  )
+
+print(figura_3)
+```
+
+```{r}
+# ============================================================
+# FIGURA 3. COMPARACIÓN MICROBIOLÓGICA HISTÓRICA Y ACTUAL
+# Mapa de calor del cambio relativo simétrico (%)
+# ============================================================
+
+# 1. Variables microbiológicas
+micro_variables <- c(
+  "coliformes_totales_nmp_100ml",
+  "coliformes_fecales_nmp_100ml",
+  "e_coli_nmp_100ml"
+)
+
+# 2. Preparar los datos
+fig3_datos <- datos |>
+  dplyr::group_by(periodo, punto_comparacion) |>
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::all_of(micro_variables),
+      ~ mean(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) |>
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(micro_variables),
+    names_to = "indicador",
+    values_to = "nmp"
+  ) |>
+  tidyr::pivot_wider(
+    names_from = periodo,
+    values_from = nmp
+  ) |>
+  dplyr::mutate(
+
+    # Cambio relativo simétrico (%)
+    cambio = dplyr::if_else(
+      !is.na(Historico) &
+        !is.na(Actual) &
+        (Historico + Actual) > 0,
+      200 * (Actual - Historico) / (Actual + Historico),
+      NA_real_
+    ),
+
+    # Etiquetas dentro de las celdas
+    etiqueta = dplyr::if_else(
+      is.na(cambio),
+      "NC",
+      paste0(sprintf("%.1f", cambio), "%")
+    ),
+
+    # Contraste del texto
+    color_texto = dplyr::if_else(
+      !is.na(cambio) & abs(cambio) >= 100,
+      "white",
+      "black"
+    ),
+
+    # Nombres de los indicadores
+    indicador = factor(
+      indicador,
+      levels = rev(micro_variables),
+      labels = rev(c(
+        "Coliformes totales",
+        "Coliformes fecales",
+        "Escherichia coli"
+      ))
+    )
+  )
+
+# 3. Crear mapa de calor
+figura_3 <- ggplot2::ggplot(
+  fig3_datos,
+  ggplot2::aes(
+    x = punto_comparacion,
+    y = indicador,
+    fill = cambio
+  )
+) +
+
+  # Celdas
+  ggplot2::geom_tile(
+    color = "white",
+    linewidth = 0.6
+  ) +
+
+  # Porcentajes
+  ggplot2::geom_text(
+    ggplot2::aes(
+      label = etiqueta,
+      color = color_texto
+    ),
+    size = 4.2,
+    fontface = "bold",
+    show.legend = FALSE
+  ) +
+
+  # Escala de colores
+  ggplot2::scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-200, 200),
+    na.value = "grey75",
+    name = "Cambio relativo\nsimétrico (%)"
+  ) +
+
+  # Colores de los porcentajes
+  ggplot2::scale_color_identity() +
+
+  # Títulos
+  ggplot2::labs(
+    x = "Punto de muestreo",
+    y = "Indicador microbiológico"
+  ) +
+
+  # Diseño
+  ggplot2::theme_minimal(base_size = 12) +
+
+  ggplot2::theme(
+    panel.grid = ggplot2::element_blank(),
+    axis.text.x = ggplot2::element_text(
+      face = "bold"
+    ),
+    legend.position = "right"
+  )
+
+# 4. Mostrar figura
+print(figura_3)
+
+# 5. Exportar figura
+ggplot2::ggsave(
+  filename = "Figura_6_Comparacion_Microbiologica.png",
+  plot = figura_3,
+  width = 12,
+  height = 4.5,
+  dpi = 300,
+  bg = "white"
+)
+```
+
+
+
+
+```{r}
+# 7.2.4. Comparación estadística entre períodos
+
+variables_analisis <- c(
+  "ph",
+  "temperatura_c",
+  "conductividad_us_cm",
+  "oxigeno_disuelto_mg_l",
+  "turbidez_ntu",
+  "dbo5_mg_l",
+  "dqo_mg_l",
+  "nitratos_mg_l",
+  "nitritos_mg_l",
+  "nitrogeno_total_mg_l",
+  "fosforo_total_mg_l",
+  "tds_mg_l",
+  "tss_mg_l",
+  "coliformes_totales_nmp_100ml",
+  "coliformes_fecales_nmp_100ml",
+  "e_coli_nmp_100ml"
+)
+
+# Comprobar que las columnas existen
+setdiff(variables_analisis, names(datos))
+```
+
+```{r}
+grep("dbo|dqo|tss|suspend|solidos",
+     names(datos),
+     value = TRUE,
+     ignore.case = TRUE)
+```
+
+```{r}
+variables_analisis[variables_analisis == "dbo5_mg_l"] <- "dbo_mg_l_o2"
+variables_analisis[variables_analisis == "dqo_mg_l"] <- "dqo_mg_l_o2"
+variables_analisis[variables_analisis == "tss_mg_l"] <- "TSS"
+
+# Verificar
+setdiff(variables_analisis, names(datos))
+```
+
+```{r}
+table(datos$dbo_analisis, useNA = "ifany")
+table(datos$dqo_analisis, useNA = "ifany")
+```
+
+```{r}
+datos |>
+  dplyr::filter(
+    dbo_analisis == 12.5 | dqo_analisis == 12.5
+  ) |>
+  dplyr::select(
+    periodo,
+    punto_comparacion,
+    replica,
+    dbo_mg_l_o2,
+    dbo_analisis,
+    dqo_mg_l_o2,
+    dqo_analisis
+  )
+```
+
+```{r}
+tabla_fisico_estadisticas
+resultados_t
+resultados_micro
+resultados_dbo_dqo
+resultado_sensibilidad
+```
+
+```{r}
+resultado_ph
+prueba_fosforo
+test_TSS
+```
+
+```{r}
+normalidad_fq
+normalidad_micro
+normalidad_dbo_dqo
+```
+
+```{r}
+resultado_ph
+```
+
+```{r}
+# Consolidar los valores p fisicoquímicos ya calculados
+
+p_fisico <- dplyr::bind_rows(
+  resultados_t |>
+    dplyr::select(parametro, p_valor),
+
+  resultados_dbo_dqo |>
+    dplyr::select(parametro, p_valor),
+
+  resultado_ph,
+
+  tibble::tibble(
+    parametro = c("Fósforo total", "TSS"),
+    p_valor = c(0.03125, test_TSS$p.value)
+  )
+) |>
+  dplyr::mutate(
+    p_ajustado_holm = p.adjust(p_valor, method = "holm"),
+    significativo = p_ajustado_holm < 0.05
+  ) |>
+  dplyr::arrange(p_ajustado_holm)
+
+# Mostrar resultados
+p_fisico
+```
+
+```{r}
+prueba_ph
+```
+
+```{r}
+fosforo_diferencias |>
+  dplyr::mutate(
+    diferencia = Actual - Historico
+  ) |>
+  dplyr::select(punto_comparacion, Historico, Actual, diferencia)
+```
+
+```{r}
+estado_metales
+```
+
+```{r}
+resumen_deteccion_metales <- estado_metales |>
+  dplyr::group_by(parametro) |>
+  dplyr::summarise(
+    puntos_historicos = sum(detectado_Historico),
+    puntos_actuales = sum(detectado_Actual),
+    .groups = "drop"
+  )
+
+resumen_deteccion_metales
+```
+
+```{r}
+ls(pattern = "metal|mcnemar|deteccion|holm")
+```
+
+```{r}
+evaluacion_metales
+```
+
+```{r}
+# Prueba exacta de McNemar para metales
+# Reutiliza el objeto estado_metales
+
+resultados_mcnemar <- estado_metales |>
+  dplyr::group_by(parametro) |>
+  dplyr::summarise(
+    aumento = sum(!detectado_Historico & detectado_Actual),
+    disminucion = sum(detectado_Historico & !detectado_Actual),
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(
+    discordantes = aumento + disminucion,
+    p_valor = mapply(
+      function(a, n) {
+        if (n == 0) return(NA_real_)
+        binom.test(a, n, p = 0.5)$p.value
+      },
+      aumento, discordantes
+    ),
+    p_ajustado_holm = p.adjust(p_valor, method = "holm")
+  )
+
+resultados_mcnemar
+```
+
+```{r}
+# Zinc: comparación de concentraciones cuantificadas en ambos períodos
+
+zinc_pareado <- resumen_metales |>
+  dplyr::select(
+    periodo,
+    punto_comparacion,
+    zinc_mg_l
+  ) |>
+  tidyr::pivot_wider(
+    names_from = periodo,
+    values_from = zinc_mg_l
+  ) |>
+  dplyr::filter(
+    Historico > 0,
+    Actual > 0
+  ) |>
+  dplyr::mutate(
+    diferencia = Actual - Historico
+  )
+
+zinc_pareado
+```
+
+```{r}
+# Normalidad de las diferencias pareadas del zinc
+shapiro.test(zinc_pareado$diferencia)
+
+# Resumen descriptivo del cambio
+summary(zinc_pareado$diferencia)
+```
+
+```{r}
+# Comparación estadística del zinc
+prueba_zinc <- t.test(
+  zinc_pareado$Actual,
+  zinc_pareado$Historico,
+  paired = TRUE
+)
+
+prueba_zinc
+
+# Tamaño del efecto: Cohen's dz
+mean(zinc_pareado$diferencia) /
+  sd(zinc_pareado$diferencia)
+```
+
+```{r}
+resultados_micro |>
+  dplyr::select(
+    parametro,
+    diferencia_media_log,
+    t,
+    gl,
+    p_valor,
+    p_ajustado_holm,
+    IC95_inferior,
+    IC95_superior,
+    cohens_dz,
+    reduccion_veces
+  ) |>
+  print(width = Inf)
+```
+
+```{r}
+grep("ica", ls(), ignore.case = TRUE, value = TRUE)
+```
+
+```{r}
+names(ica_comparacion)
+names(ica_punto)
+names(resumen_ica)
+```
+
+```{r}
+ica_comparacion |>
+  dplyr::arrange(punto_comparacion) |>
+  print(n = Inf, width = Inf)
+```
+
+```{r}
+resumen_ica
+```
+
+```{r}
+grep("corr|spearman", ls(), ignore.case = TRUE, value = TRUE)
+```
+
+```{r}
+names(corr_actual)
+names(corr_historico)
+names(correlaciones_periodo)
+names(correlaciones_punto)
+```
+
+```{r}
+# Cantidad de correlaciones por período
+nrow(corr_historico)
+nrow(corr_actual)
+
+# Resultados ordenados por magnitud de correlación
+corr_historico |>
+  dplyr::arrange(dplyr::desc(abs(rho))) |>
+  print(n = Inf, width = Inf)
+
+corr_actual |>
+  dplyr::arrange(dplyr::desc(abs(rho))) |>
+  print(n = Inf, width = Inf)
+```
+
+```{r}
+names(corr_punto_actual)
+names(corr_punto_historico)
+
+head(corr_punto_actual)
+head(corr_punto_historico)
+```
+
+```{r}
+# Correlaciones de mayor magnitud por período
+dplyr::bind_rows(
+  corr_punto_historico,
+  corr_punto_actual
+) |>
+  dplyr::group_by(periodo) |>
+  dplyr::slice_max(
+    order_by = abs(rho),
+    n = 5,
+    with_ties = FALSE
+  ) |>
+  dplyr::arrange(periodo, dplyr::desc(abs(rho))) |>
+  dplyr::ungroup() |>
+  print(n = Inf, width = Inf)
+```
+
+```{r}
+names(corr_grafica)
+head(corr_grafica)
+```
+
+```{r}
+# Figura 5. Correlaciones fisicoquímicas y microbiológicas
+
+datos_figura5 <- dplyr::bind_rows(
+  corr_punto_historico,
+  corr_punto_actual
+) |>
+  dplyr::mutate(
+    periodo = factor(periodo, levels = c("Historico", "Actual")),
+    microbiologica = dplyr::recode(
+      microbiologica,
+      "log_col_totales" = "Coliformes totales",
+      "log_col_fecales" = "Coliformes fecales",
+      "log_e_coli" = "E. coli"
+    )
+  )
+
+figura5 <- ggplot2::ggplot(
+  datos_figura5,
+  ggplot2::aes(
+    x = microbiologica,
+    y = fisicoquimica,
+    fill = rho
+  )
+) +
+  ggplot2::geom_tile(color = "white", linewidth = 0.7) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = sprintf("%.2f", rho)),
+    size = 3
+  ) +
+  ggplot2::facet_wrap(~ periodo, nrow = 1) +
+  ggplot2::scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "white",
+    high = "#2166AC",
+    midpoint = 0,
+    limits = c(-1, 1),
+    name = "Spearman (ρ)"
+  ) +
+  ggplot2::labs(
+    x = "Indicador microbiológico",
+    y = "Parámetro fisicoquímico"
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    panel.grid = ggplot2::element_blank(),
+    strip.text = ggplot2::element_text(face = "bold"),
+    axis.text.x = ggplot2::element_text(
+      angle = 35,
+      hjust = 1
+    )
+  )
+
+figura5
+```
+
+```{r}
+figura5 <- figura5 +
+  ggplot2::scale_y_discrete(
+    labels = c(
+      "turbidez_ntu" = "Turbidez (NTU)",
+      "TSS" = "Sólidos suspendidos totales (mg/L)",
+      "temperatura_c" = "Temperatura (°C)",
+      "tds_mg_l" = "Sólidos disueltos totales (mg/L)",
+      "ph" = "pH",
+      "oxigeno_disuelto_mg_l" = "Oxígeno disuelto (mg/L)",
+      "nitrogeno_total_mg_l" = "Nitrógeno total (mg/L)",
+      "nitritos_mg_l" = "Nitritos (mg/L)",
+      "nitratos_mg_l" = "Nitratos (mg/L)",
+      "fosforo_total_mg_l" = "Fósforo total (mg/L)",
+      "dqo_mg_l_o2" = "DQO (mg O₂/L)",
+      "dbo_mg_l_o2" = "DBO₅ (mg O₂/L)",
+      "conductividad_us_cm" = "Conductividad (µS/cm)"
+    )
+  ) +
+  ggplot2::theme(
+    axis.text.y = ggplot2::element_text(size = 10),
+    axis.text.x = ggplot2::element_text(size = 10, angle = 35, hjust = 1)
+  )
+
+figura5
+```
+
+
+
+
+
+
+
+
+
+
